@@ -1,1 +1,24 @@
-{"name":"captainhec_cardmaker","version":"2.0.0","private":true,"description":"Editor web de cartas con biblioteca local y Google Drive","type":"commonjs","scripts":{"start":"node scripts/serve.js","dev":"node scripts/serve.js","build":"node scripts/build.js","test":"node --test tests/*.test.js","check":"node scripts/check.js","test:e2e":"playwright test"},"dependencies":{"fflate":"0.8.3"},"devDependencies":{"@playwright/test":"^1.56.1"},"engines":{"node":">=22"}}
+{
+  "name": "ivaneitormaker",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Editor web de cartas con biblioteca local y Google Drive",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node scripts/serve.js",
+    "dev": "node scripts/serve.js",
+    "build": "node scripts/build.js",
+    "test": "node --test tests/*.test.js",
+    "check": "node scripts/check.js",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "fflate": "0.8.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

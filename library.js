@@ -135,6 +135,6 @@ async function importLibrary(input) {
 async function backupLibrary(records) {
     const entries = {};
     records.forEach((record, index) => entries[`${String(index + 1).padStart(5, '0')}_${CardCore.fileName(record.data, 'json')}`] = fflate.strToU8(JSON.stringify(record.data)));
-    CardImages.download(new Blob([fflate.zipSync(entries, { level: 0 })], { type: 'application/zip' }), 'Cardmaker-respaldo.zip');
+    CardImages.download(new Blob([fflate.zipSync(entries, { level: 0 })], { type: 'application/zip' }), 'IvaneitorMaker-respaldo.zip');
 }
 document.addEventListener('keydown', event => { if (event.key === 'Escape') toggleDashboard(false); });

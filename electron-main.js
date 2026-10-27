@@ -6,7 +6,7 @@ function createWindow() {
     const win = new BrowserWindow({
         width: 1280,
         height: 850,
-        title: "PokéCard Maker Pro",
+        title: "IvaneitorMaker",
         // icon: path.join(__dirname, 'tu_icono.ico'), // Descomenta si tienes un icono
         webPreferences: {
             nodeIntegration: false,

@@ -1,4 +1,4 @@
-# CaptainHec Cardmaker · web
+# IvaneitorMaker
 
 Editor de cartas recuperado de la aplicación Electron y preparado para alojamiento estático. Conserva el editor, añade biblioteca local, acceso Google/Drive y exportación de colecciones sin modificar el editor mientras genera PNG.
 

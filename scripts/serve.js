@@ -14,4 +14,4 @@ http.createServer((req, res) => {
         res.writeHead(200, { 'Content-Type': types[path.extname(file)] || 'application/octet-stream', 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-store' });
         fs.createReadStream(file).pipe(res);
     });
-}).listen(4173, '127.0.0.1', () => console.log('Cardmaker: http://localhost:4173 (publica solo site/)'));
+}).listen(4173, '127.0.0.1', () => console.log('IvaneitorMaker: http://localhost:4173 (publica solo site/)'));
