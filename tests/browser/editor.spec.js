@@ -2,7 +2,7 @@ const { test, expect } = require('@playwright/test');
 const fs = require('node:fs');
 const { unzipSync, strFromU8 } = require('fflate');
 async function start(page) {
-    await page.route('**/config.js', route => route.fulfill({ body: "globalThis.CARDMAKER_CONFIG = {googleClientId:''};", contentType: 'text/javascript' }));
+    await page.route(/\/(?:config|app-config-[a-f0-9]+)\.js(?:\?.*)?$/, route => route.fulfill({ body: "globalThis.CARDMAKER_CONFIG = {googleClientId:''};", contentType: 'text/javascript' }));
     await page.route('https://accounts.google.com/**', route => route.fulfill({ body: '', contentType: 'text/javascript' }));
     await page.route('https://pokeapi.co/**', route => route.fulfill({ status: 404, body: '{}' }));
     await page.goto('/');

@@ -18,7 +18,7 @@
             width: 380px;
             background: #1a1a1a;
             border-right: 1px solid #444;
-            overflow-y: auto; /* IMPORTANTE PARA STICKY */
+            overflow-y: auto;
             height: 100vh;
             display: flex;
             flex-direction: column;
@@ -32,15 +32,13 @@
         input, select, textarea { width: 100%; box-sizing: border-box; background: #222; border: 1px solid #444; color: white; padding: 5px; border-radius: 4px; }
         input:focus, textarea:focus { border-color: #4db8ff; outline: none; }
 
-        /* === HEADER FIJO (GESTIÓN DE CARTAS) === */
-        .sticky-section {
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            background: #001a29;
-            border-bottom: 2px solid #4db8ff;
-            padding: 10px 15px; /* Menos padding para que sea compacto */
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        .controls > * { flex-shrink: 0; }
+
+        /* Gestión de cartas integrada en el flujo del formulario. */
+        .editor-header {
+            background: #1a1a1a;
+            border-bottom: 1px solid #333;
+            padding: 15px;
         }
 
         /* === PANTALLA PRINCIPAL (CANVAS) === */
@@ -164,7 +162,7 @@
     <div class="app-container">
         <aside class="controls">
 
-            <div class="sticky-section">
+            <div class="editor-header">
                 <h3 style="color:#4db8ff; margin: 0 0 10px 0; font-size: 16px; display: flex; align-items: center; gap: 5px;">
                     IvaneitorMaker
                 </h3>

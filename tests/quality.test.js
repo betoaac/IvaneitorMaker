@@ -3,10 +3,10 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 
-test('supplied Cookie Basic keeps its native Ultra size for export', () => {
+for (const stage of ['Basico', 'Fase1']) test(`supplied Cookie ${stage} keeps its native Ultra size for export`, () => {
     const context = {};
     vm.runInNewContext(fs.readFileSync('assets.js', 'utf8'), context);
-    const key = 'bordes/PokemonTGC_Plantilla_GALLETA_Basico.png';
+    const key = `bordes/PokemonTGC_Plantilla_GALLETA_${stage}.png`;
     assert.notEqual(context.CARD_EXPORT_ASSETS[key], context.CARD_ASSETS[key]);
     // This supplied image uses extended WebP, with dimensions in its VP8X header.
     const data = fs.readFileSync(context.CARD_EXPORT_ASSETS[key]);

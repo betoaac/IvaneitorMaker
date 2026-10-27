@@ -2,7 +2,7 @@ const { test, expect } = require('@playwright/test');
 test('Google UI and Drive create/update round trip with simulated responses', async ({ page }) => {
     let stored;
     const requests = [];
-    await page.route('**/config.js', route => route.fulfill({ contentType: 'text/javascript', body: "globalThis.CARDMAKER_CONFIG={googleClientId:'mock.apps.googleusercontent.com'};" }));
+    await page.route(/\/(?:config|app-config-[a-f0-9]+)\.js(?:\?.*)?$/, route => route.fulfill({ contentType: 'text/javascript', body: "globalThis.CARDMAKER_CONFIG={googleClientId:'mock.apps.googleusercontent.com'};" }));
     await page.route('https://accounts.google.com/**', route => route.fulfill({ contentType: 'text/javascript', body: `globalThis.google={accounts:{oauth2:{hasGrantedAllScopes:()=>true,initTokenClient:options=>({requestAccessToken:()=>options.callback({access_token:'mock-token',expires_in:3600})}),revoke:(token,done)=>done()}}};` }));
     await page.route('https://www.googleapis.com/**', async route => {
         const request = route.request(); const url = request.url(); const method = request.method();

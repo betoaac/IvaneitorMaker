@@ -6,5 +6,5 @@ for (const stage of ['Basico', 'Fase1']) {
     const key = `bordes/PokemonTGC_Plantilla_GALLETA_${stage}.png`;
     const file = `web-assets/bordes/PokemonTGC_Plantilla_GALLETA_${stage}.webp`;
     globalThis.CARD_ASSETS[key] = file;
+    globalThis.CARD_EXPORT_ASSETS[key] = `web-assets/export/bordes/PokemonTGC_Plantilla_GALLETA_${stage}.webp`;
 }
-globalThis.CARD_EXPORT_ASSETS['bordes/PokemonTGC_Plantilla_GALLETA_Basico.png'] = 'web-assets/export/bordes/PokemonTGC_Plantilla_GALLETA_Basico.webp';
