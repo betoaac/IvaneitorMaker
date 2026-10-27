@@ -29,7 +29,9 @@ test('initial load, all type backgrounds, and custom symbols render without cons
 });
 test('custom background is embedded in portable JSON and survives import', async ({ page }) => {
     await start(page);
-    await page.locator('.background-tools summary').click();
+    const chooser = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: 'Cargar mi fondo personalizado' }).click();
+    await chooser;
     // Small real PNG, including transparency, rather than relying on external media.
     const png = Buffer.from(await page.evaluate(() => { const c = document.createElement('canvas'); c.width = c.height = 2; c.getContext('2d').fillRect(0, 0, 1, 1); return c.toDataURL('image/png').split(',')[1]; }), 'base64');
     await page.locator('#background-file').setInputFiles({ name: 'background.png', mimeType: 'image/png', buffer: png });

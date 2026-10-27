@@ -8,6 +8,7 @@ button:focus-visible, [role=button]:focus-visible, summary:focus-visible, input:
 #app-status { font-size: 12px; line-height: 1.4; margin: 8px 0; color: #c9d1d9; }
 #app-status[data-error=true] { color: #ffb4ab; }
 .background-tools { border: 1px solid #59636e; border-radius: 5px; padding: 8px; font-size: 12px; }
+.custom-background-button { width: 100%; margin: 8px 0; padding: 10px; border-color: #82caff; }
 .background-tools p { line-height: 1.5; color: #c9d1d9; }
 .file-button { display: inline-block; border: 1px solid #59636e; border-radius: 5px; padding: 7px; color: white; }
 .file-button input { display: block; margin-top: 5px; max-width: 260px; }
