@@ -19,6 +19,14 @@ Referencia: [workflows oficiales de Pages](https://docs.github.com/en/pages/gett
 
 El modo de descarga sin Google puede publicarse con `config.js` vacío y sin la variable `GOOGLE_CLIENT_ID`. Guardar entrega un ZIP con PNG Ultra y JSON editable; configurar Google no es un requisito para ese modo.
 
+## Instalación de Kotcia
+
+- URL de producción: `https://cardmaker.kotcia.com/` (GitHub Pages, HTTPS obligatorio).
+- Cloudflare DNS: CNAME `cardmaker` → `betoaac.github.io`, DNS only, TTL Auto.
+- Cliente OAuth web existente en el proyecto `ivancardmaker`; origen autorizado `https://cardmaker.kotcia.com`.
+- Inicio y privacidad de OAuth: `https://cardmaker.kotcia.com/` y `/privacy.html`.
+- El ID público se inyecta mediante la variable de Actions `GOOGLE_CLIENT_ID`. El build genera un nombre con hash para evitar configuración antigua en caché.
+
 ## Configuración Google
 
 1. En Google Cloud crea/elige un proyecto y habilita **Google Drive API**.
@@ -34,7 +42,9 @@ El modelo implementado es el [token model de Google Identity Services](https://d
 
 Los JSON se almacenan en la [carpeta privada appDataFolder](https://developers.google.com/workspace/drive/api/guides/appdata). Está oculta en Mi unidad y solo esta app puede acceder a ella. Para obtener una carpeta visible/compartible habría que cambiar al permiso `drive.file` y diseñar ese flujo; no está implementado.
 
-## Prueba real pendiente antes de dar Drive por validado
+## Revisiones y comprobación real de Drive
+
+La descarga `v3/files/{id}?alt=media` no proporciona una revisión utilizable en el navegador. Para evitar bloquear todas las actualizaciones, se obtiene el campo JSON `etag` mediante [Drive v2 files](https://developers.google.com/workspace/drive/api/reference/rest/v2/files) antes y después de leer el contenido; si difiere, la lectura se rechaza. Las actualizaciones usan [v2 files.update](https://developers.google.com/workspace/drive/api/reference/rest/v2/files/update) con `PUT` e `If-Match`; un HTTP 412 conserva los cambios en el editor. La creación, listado y descarga siguen usando v3. Se mantiene el mismo permiso `drive.appdata`, sin ampliar acceso.
 
 Con un cliente OAuth real y el sitio en su origen autorizado:
 
