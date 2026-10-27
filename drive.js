@@ -5,9 +5,9 @@
         constructor({ token, fetcher = (...args) => root.fetch(...args), onExpired = () => {} }) {
             this.token = token; this.fetcher = fetcher; this.onExpired = onExpired;
         }
-        async request(path, init = {}, upload = false) {
-            const response = await this.fetcher(`https://www.googleapis.com/${upload ? 'upload/' : ''}drive/v3/${path}`, {
-                ...init, signal: AbortSignal.timeout(30000),
+        async request(path, init = {}, upload = false, version = 3) {
+            const response = await this.fetcher(`https://www.googleapis.com/${upload ? 'upload/' : ''}drive/v${version}/${path}`, {
+                ...init, cache: 'no-store', signal: AbortSignal.timeout(30000),
                 headers: { ...init.headers, Authorization: `Bearer ${this.token()}` }
             });
             if (response.status === 401) { this.onExpired(); throw new Error('La sesión de Google expiró. Vuelve a conectar y repite la operación.'); }
@@ -40,13 +40,18 @@
             return records;
         }
         async get(id) {
+            // v3 media downloads do not expose a usable file ETag. v2 supplies it in JSON.
+            const metadataPath = `files/${encodeURIComponent(id)}?fields=etag`;
+            const before = await (await this.request(metadataPath, {}, false, 2)).json();
             const response = await this.request(`files/${encodeURIComponent(id)}?alt=media`);
             const text = await response.text();
             if (text.length > 24 * 1024 * 1024) throw new Error('Carta demasiado grande.');
+            const after = await (await this.request(metadataPath, {}, false, 2)).json();
+            if (!before.etag || before.etag !== after.etag) throw new Error('La revisión de esta carta cambió durante la lectura. Recarga la galería antes de guardar.');
             const record = JSON.parse(text);
             record.data = CardCore.normalizeCard(record.data);
             record.id = id;
-            record.revision = response.headers.get('etag');
+            record.revision = after.etag;
             record.remote = true;
             return record;
         }
@@ -56,7 +61,7 @@
             if (new Blob([body]).size > 5 * 1024 * 1024) throw new Error('La carta supera 5 MB. Reduce sus imágenes antes de guardarla en Drive.');
             let response;
             if (revision) {
-                response = await this.request(`files/${encodeURIComponent(record.id)}?uploadType=media`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'If-Match': revision }, body }, true);
+                response = await this.request(`files/${encodeURIComponent(record.id)}?uploadType=media`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'If-Match': revision }, body }, true, 2);
             } else {
                 const boundary = 'pokecard_' + crypto.randomUUID().replaceAll('-', '');
                 const metadata = { name: `${CardCore.safeName(record.data.mainName)}.json`, mimeType: 'application/json', parents: ['appDataFolder'], appProperties: { app: 'pokecard-v1' } };
@@ -67,7 +72,7 @@
             return this.get(saved.id || record.id);
         }
         async remove(id, revision) {
-            await this.request(`files/${encodeURIComponent(id)}`, { method: 'DELETE', headers: revision ? { 'If-Match': revision } : {} });
+            await this.request(`files/${encodeURIComponent(id)}`, { method: 'DELETE', headers: revision ? { 'If-Match': revision } : {} }, false, 2);
         }
     }
     root.DriveCards = DriveCards;

@@ -14,7 +14,8 @@ test('Google UI and Drive create/update round trip with simulated responses', as
             stored = JSON.parse(dataPart.slice(0, dataPart.lastIndexOf('\r\n--')));
             return route.fulfill({ json: { id: 'mock-card' } });
         }
-        if (method === 'PATCH') { stored = JSON.parse(request.postData()); return route.fulfill({ json: { id: 'mock-card' } }); }
+        if (method === 'PUT') { stored = JSON.parse(request.postData()); return route.fulfill({ json: { id: 'mock-card' } }); }
+        if (url.includes('/files/mock-card?fields=etag')) return route.fulfill({ json: { etag: 'etag-1' } });
         if (url.includes('/files/mock-card?alt=media')) return route.fulfill({ json: stored, headers: { etag: 'etag-1', 'access-control-expose-headers': 'ETag' } });
         if (url.includes('/files?')) return route.fulfill({ json: { files: stored ? [{ id: 'mock-card' }] : [] } });
         return route.fulfill({ status: 500 });
@@ -36,10 +37,10 @@ test('Google UI and Drive create/update round trip with simulated responses', as
     await page.getByRole('dialog', { name: 'Guardar carta abierta' }).getByRole('button', { name: 'Cancelar', exact: true }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
     expect(stored.data.namePrefix).toBe('Prueba');
-    expect(requests.some(r => r.method === 'PATCH')).toBe(false);
+    expect(requests.some(r => r.method === 'PUT')).toBe(false);
     await page.getByRole('button', { name: /GUARDAR/ }).click();
     await page.getByRole('dialog', { name: 'Guardar carta abierta' }).getByRole('button', { name: 'Actualizar carta', exact: true }).click();
     await expect.poll(() => stored.data.namePrefix).toBe('Actualizada');
-    expect(requests.some(r => r.method === 'PATCH' && r.revision === 'etag-1')).toBe(true);
+    expect(requests.some(r => r.method === 'PUT' && r.revision === 'etag-1')).toBe(true);
     expect(requests.every(r => r.auth === 'Bearer mock-token')).toBe(true);
 });
