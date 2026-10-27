@@ -77,7 +77,7 @@
         return '"' + text.replace(/"/g, '""') + '"';
     }
     function backgroundPath(type, stage) {
-        const mapped = { Fairy: 'Hada', Cookie: 'Normal', Cockie: 'Normal', Estelar: 'Normal' }[type] || (TYPES.includes(type) ? type : 'Normal');
+        const mapped = { Fairy: 'Hada', Cookie: 'GALLETA', Cockie: 'GALLETA', Estelar: 'GALLETA' }[type] || (TYPES.includes(type) ? type : 'Normal');
         return `bordes/PokemonTGC_Plantilla_${mapped}_${stage === 'Basico' ? 'Basico' : 'Fase1'}.png`;
     }
     const api = { TYPES, defaults, normalizeCard, safeImage, safeName, fileName, csvCell, backgroundPath };

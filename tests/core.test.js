@@ -30,6 +30,17 @@ test('CSV preserves zero, escapes quotes and neutralizes spreadsheet formulas', 
 });
 test('background mapping selects Hada and keeps legacy Cookie/Estelar compatible', () => {
     assert.equal(Core.backgroundPath('Fairy', 'Fase2'), 'bordes/PokemonTGC_Plantilla_Hada_Fase1.png');
-    assert.equal(Core.backgroundPath('Cockie', 'Basico'), 'bordes/PokemonTGC_Plantilla_Normal_Basico.png');
+    const context = {};
+    require('node:vm').runInNewContext(require('node:fs').readFileSync(require('node:path').join(__dirname, '../assets.js'), 'utf8'), context);
+    for (const type of ['Cookie', 'Cockie', 'Estelar']) {
+        for (const stage of ['Basico', 'Fase1', 'Fase2']) {
+            const expected = `web-assets/bordes/PokemonTGC_Plantilla_GALLETA_${stage === 'Basico' ? 'Basico' : 'Fase1'}.webp`;
+            const key = Core.backgroundPath(Core.normalizeCard({ tcgType: type }).tcgType, stage);
+            assert.equal(context.CARD_ASSETS[key], expected);
+            assert.equal(context.CARD_EXPORT_ASSETS[key] || context.CARD_ASSETS[key], expected);
+            assert.equal(Core.backgroundPath(type, stage), key);
+            assert.ok(require('node:fs').existsSync(require('node:path').join(__dirname, '..', expected)));
+        }
+    }
     assert.equal(Core.normalizeCard({ tcgType: 'Cookie' }).tcgType, 'Estelar');
 });
