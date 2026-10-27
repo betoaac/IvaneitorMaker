@@ -6,6 +6,40 @@ let previewRunning = false;
 let previewPending = false;
 let savingCard = false;
 let loadedRecord = null;
+let evoLookupTimer;
+
+function clearEvoData() {
+    cancelLookup(); clearTimeout(evoLookupTimer);
+    cardData.evoId = null; cardData.evoNameRef = ''; cardData.evoArtData = null;
+    evoImageGlobal = null; evoCacheKey++;
+    document.getElementById('evoInput').value = '';
+    document.getElementById('evo-status').textContent = 'Imagen eliminada. Puedes buscar por nombre o número de Pokédex.';
+    updateCardData();
+}
+function scheduleEvoLookup() {
+    cancelLookup(); clearTimeout(evoLookupTimer);
+    evoLookupTimer = setTimeout(lookupEvolution, 500);
+}
+async function lookupEvolution() {
+    clearTimeout(evoLookupTimer); cancelLookup();
+    const ticket = editorGeneration;
+    const name = document.getElementById('evo_search').value.trim();
+    if (!name) { document.getElementById('evo-status').textContent = 'Escribe el nombre o número de Pokédex.'; return; }
+    try {
+        let id = /^\d{1,5}$/.test(name) ? Number(name) : null;
+        let reference = name;
+        if (!id) {
+            document.getElementById('evo-status').textContent = 'Consultando nombre en la Pokédex…';
+            const slug = name.toLowerCase().replace(/♀|\(f\)$/g, '-f').replace(/♂|\(m\)$/g, '-m');
+            const response = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${encodeURIComponent(slug)}`, { signal: AbortSignal.timeout(12000) });
+            if (!response.ok) throw new Error('No se encontró ese Pokémon. Prueba con su número de Pokédex o carga una imagen.');
+            const species = await response.json(); id = species.id; reference = species.name;
+        }
+        if (ticket !== editorGeneration) return;
+        if (!/^\d+$/.test(name)) document.getElementById('evo_name').value = reference.charAt(0).toUpperCase() + reference.slice(1);
+        await loadEvoImageFromData(id, reference);
+    } catch (error) { if (ticket === editorGeneration) document.getElementById('evo-status').textContent = error.message; }
+}
 
 function status(message, error = false) {
     const el = document.getElementById('app-status');
@@ -14,6 +48,7 @@ function status(message, error = false) {
 function cancelLookup() {
     editorGeneration++;
     clearTimeout(typingTimer);
+    clearTimeout(evoLookupTimer);
     pokeController?.abort();
 }
 function resetFormControls() {

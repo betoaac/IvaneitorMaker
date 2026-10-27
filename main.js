@@ -18,11 +18,18 @@ function loadLocalEvo(input) { return loadRasterInput(input, 'evoArtData'); }
 
 async function loadEvoImageFromData(id, name) {
     const ticket = editorGeneration;
-    const image = await CardImages.evolution({ evoId: id });
-    if (ticket !== editorGeneration) return;
-    evoImageGlobal = image; evoCacheKey++;
     cardData.evoId = id; cardData.evoNameRef = name; cardData.evoArtData = null;
     updateCardData();
+    try {
+        const image = await CardImages.evolution({ evoId: id }, true);
+        if (ticket !== editorGeneration) return;
+        evoImageGlobal = image; evoCacheKey++;
+        const online = image.src.startsWith('https:');
+        document.getElementById('evo-status').textContent = `${name || id}: imagen ${online ? 'de respaldo en Internet' : 'local'} cargada. Se muestra en Fase 1 o Fase 2.`;
+        updateCardData();
+    } catch (error) {
+        if (ticket === editorGeneration) document.getElementById('evo-status').textContent = error.message;
+    }
 }
 
 const energyFiles = {

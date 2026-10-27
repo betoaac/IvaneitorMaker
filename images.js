@@ -40,7 +40,8 @@
         if (card.evoArtData) return load(card.evoArtData, { required, fullResolution });
         if (!card.evoId) return null;
         const id = String(card.evoId);
-        for (const src of [`pokemons/pm${id.padStart(4, '0')}_00_00_00_big.png`, `pokemons_other/${id.padStart(3, '0')}.png`, `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`]) {
+        const variants = Object.keys(root.CARD_ASSETS || {}).filter(src => src.startsWith(`pokemons/pm${id.padStart(4, '0')}_`) && src.endsWith('_big.png')).sort();
+        for (const src of [...new Set([`pokemons/pm${id.padStart(4, '0')}_00_00_00_big.png`, `pokemons_other/${id.padStart(3, '0')}.png`, ...variants, `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`])]) {
             // The asset manifest avoids speculative 404s on static hosting.
             if (root.CARD_ASSETS && !src.startsWith('https:') && !root.CARD_ASSETS[src]) continue;
             const image = await load(src, { fullResolution });
