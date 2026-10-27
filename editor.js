@@ -26,8 +26,9 @@ async function lookupEvolution() {
     const name = document.getElementById('evo_search').value.trim();
     if (!name) { document.getElementById('evo-status').textContent = 'Escribe el nombre o número de Pokédex.'; return; }
     try {
-        let id = /^\d{1,5}$/.test(name) ? Number(name) : null;
-        let reference = name;
+        const catalogEntry = globalThis.PokemonNames?.lookup(name);
+        let id = /^\d{1,5}$/.test(name) ? Number(name) : catalogEntry?.id;
+        let reference = catalogEntry?.name || name;
         if (!id) {
             document.getElementById('evo-status').textContent = 'Consultando nombre en la Pokédex…';
             const slug = name.toLowerCase().replace(/♀|\(f\)$/g, '-f').replace(/♂|\(m\)$/g, '-m');
@@ -36,7 +37,7 @@ async function lookupEvolution() {
             const species = await response.json(); id = species.id; reference = species.name;
         }
         if (ticket !== editorGeneration) return;
-        if (!/^\d+$/.test(name)) document.getElementById('evo_name').value = reference.charAt(0).toUpperCase() + reference.slice(1);
+        if (!/^\d+$/.test(name)) document.getElementById('evo_name').value = catalogEntry?.display || reference.charAt(0).toUpperCase() + reference.slice(1);
         await loadEvoImageFromData(id, reference);
     } catch (error) { if (ticket === editorGeneration) document.getElementById('evo-status').textContent = error.message; }
 }

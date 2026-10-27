@@ -7,7 +7,7 @@ test('Pre-Evo search resolves primary, secondary and variant sprites locally and
     await page.goto('/');
     await expect.poll(() => page.locator('#cardCanvas').evaluate(c => c.width)).toBe(745);
     await page.getByRole('button', { name: 'Fase 1', exact: true }).click();
-    const search = page.getByRole('searchbox', { name: 'Buscar Pokémon de preevolución' });
+    const search = page.getByLabel('Buscar Pokémon de preevolución', { exact: true });
     await search.fill('Bulbasaur'); await page.getByRole('button', { name: 'Buscar', exact: true }).click();
     await expect.poll(() => page.evaluate(() => Number(cardData.evoId))).toBe(1);
     await expect(page.locator('#evo_name')).toHaveValue('Bulbasaur');

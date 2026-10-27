@@ -285,7 +285,7 @@
                             <input id="evo_search" type="search" placeholder="Nombre o número: Bulbasaur, 1…" aria-label="Buscar Pokémon de preevolución" oninput="scheduleEvoLookup()" onkeydown="if(event.key === 'Enter') { event.preventDefault(); lookupEvolution(); }">
                             <button type="button" onclick="lookupEvolution()">Buscar</button>
                         </div>
-                        <small id="evo-status" role="status">Por nombre consulta la Pokédex; por número busca directamente en tus sprites locales.</small>
+                        <small id="evo-status" role="status">Autocompleta por nombre. Busca primero la imagen local; usa Internet si falta o si el nombre no está en el catálogo.</small>
                         <div style="display:flex; gap:5px;">
                             <input type="file" id="evoInput" accept="image/*" onchange="loadLocalEvo(this)" style="font-size:10px; width:100%;">
                             <button type="button" onclick="clearEvoData()" style="background:#cc0000; color:white; border:none; border-radius:3px; cursor:pointer; padding:0 8px; font-weight:bold;">X</button>
@@ -673,6 +673,7 @@
     <script src="drive.js"></script>
     <script src="renderer.js"></script>
     <script src="main.js"></script>
+    <script src="autocomplete.js"></script>
     <script src="library.js"></script>
     <script src="auth.js"></script>
     <script src="editor.js"></script>

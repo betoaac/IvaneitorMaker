@@ -5,7 +5,7 @@ const target = path.join(root, 'site');
 if (path.dirname(target) !== root || path.basename(target) !== 'site') throw new Error('Destino de build fuera del proyecto.');
 fs.rmSync(target, { recursive: true, force: true });
 // Publish an explicit allowlist. Never include local saves, installers, backups or node_modules.
-const files = ['index.html', 'style.css', 'web.css', 'core.js', 'images.js', 'assets.js', 'renderer.js', 'storage.js', 'drive.js', 'auth.js', 'main.js', 'editor.js', 'library.js', 'batch.js', 'config.js', 'privacy.html'];
+const files = ['index.html', 'style.css', 'web.css', 'core.js', 'images.js', 'assets.js', 'renderer.js', 'storage.js', 'drive.js', 'auth.js', 'main.js', 'autocomplete.js', 'pokemon-names.json', 'editor.js', 'library.js', 'batch.js', 'config.js', 'privacy.html'];
 fs.mkdirSync(target, { recursive: true });
 for (const name of files) fs.copyFileSync(path.join(root, name), path.join(target, name));
 function copyDirectory(source, destination) {
