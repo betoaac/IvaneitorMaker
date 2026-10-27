@@ -1,4 +1,9 @@
 [hidden] { display: none !important; }
+.save-choice { width: min(460px, calc(100vw - 48px)); box-sizing: border-box; background: #1a1a1a; color: #eee; border: 1px solid #59636e; border-radius: 8px; padding: 22px; }
+.save-choice::backdrop { background: #000b; }
+.save-choice h2 { margin-top: 0; font-size: 18px; }
+.save-choice p { line-height: 1.5; font-size: 14px; }
+.save-choice-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .account-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12px; }
 .account-bar span { width: 100%; overflow-wrap: anywhere; }
 .account-bar a { color: #82caff; }

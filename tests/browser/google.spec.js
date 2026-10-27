@@ -32,8 +32,13 @@ test('Google UI and Drive create/update round trip with simulated responses', as
     await page.getByRole('button', { name: 'Abrir', exact: true }).click();
     await expect(page.locator('#dashboard-overlay')).toBeHidden();
     await page.locator('#pokeNamePrefix').fill('Actualizada');
-    page.once('dialog', dialog => dialog.accept());
     await page.getByRole('button', { name: /GUARDAR/ }).click();
+    await page.getByRole('dialog', { name: 'Guardar carta abierta' }).getByRole('button', { name: 'Cancelar', exact: true }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    expect(stored.data.namePrefix).toBe('Prueba');
+    expect(requests.some(r => r.method === 'PATCH')).toBe(false);
+    await page.getByRole('button', { name: /GUARDAR/ }).click();
+    await page.getByRole('dialog', { name: 'Guardar carta abierta' }).getByRole('button', { name: 'Actualizar carta', exact: true }).click();
     await expect.poll(() => stored.data.namePrefix).toBe('Actualizada');
     expect(requests.some(r => r.method === 'PATCH' && r.revision === 'etag-1')).toBe(true);
     expect(requests.every(r => r.auth === 'Bearer mock-token')).toBe(true);

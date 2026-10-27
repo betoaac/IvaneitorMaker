@@ -11,6 +11,22 @@ function element(tag, text, className) {
 function button(text, action, className = 'btn-dash-action') {
     const el = element('button', text, className); el.type = 'button'; el.onclick = action; return el;
 }
+function chooseSaveAction() {
+    return new Promise(resolve => {
+        const dialog = element('dialog', undefined, 'save-choice');
+        const title = element('h2', 'Guardar carta abierta'); title.id = 'save-choice-title';
+        dialog.setAttribute('aria-labelledby', title.id);
+        const actions = element('div', undefined, 'save-choice-actions');
+        for (const [label, value] of [['Actualizar carta', 'update'], ['Guardar como nueva', 'copy'], ['Cancelar', 'cancel']]) {
+            const action = button(label, () => dialog.close(value));
+            if (value === 'update') action.autofocus = true;
+            actions.append(action);
+        }
+        dialog.append(title, element('p', 'Actualiza la carta de la galería o crea una copia con tus cambios.'), actions);
+        dialog.addEventListener('close', () => { const choice = dialog.returnValue; dialog.remove(); resolve(choice); }, { once: true });
+        document.body.append(dialog); dialog.showModal();
+    });
+}
 async function saveSystemCard() {
     if (savingCard) return;
     savingCard = true;
@@ -25,9 +41,10 @@ async function saveSystemCard() {
         const thumb = document.createElement('canvas'); thumb.width = 220; thumb.height = 307;
         thumb.getContext('2d').drawImage(canvas, 0, 0, thumb.width, thumb.height);
         const thumbnail = thumb.toDataURL('image/webp', 0.75); thumb.width = thumb.height = 0;
-        if (existing && !confirm('¿Actualizar la carta abierta? Cancelar permite guardarla como una carta nueva.')) {
-            if (!confirm('¿Guardar como una carta nueva?')) return;
-            existing = null;
+        if (existing) {
+            const choice = await chooseSaveAction();
+            if (choice !== 'update' && choice !== 'copy') return;
+            if (choice === 'copy') existing = null;
         }
         const set = snapshot.config.setTextVal.trim().toLowerCase();
         const num = snapshot.config.setNumCurr.trim();
