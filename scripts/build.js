@@ -28,6 +28,12 @@ const configName = `app-config-${configHash}.js`;
 fs.renameSync(path.join(target, 'config.js'), path.join(target, configName));
 const indexPath = path.join(target, 'index.html');
 fs.writeFileSync(indexPath, fs.readFileSync(indexPath, 'utf8').replace('src="config.js"', `src="${configName}"`));
+// Version every local script and stylesheet, not just OAuth configuration.
+fs.writeFileSync(indexPath, fs.readFileSync(indexPath, 'utf8').replace(/(src|href)="([^"?]+\.(?:js|css))"/g, (match, attribute, file) => {
+    if (/^https?:/.test(file)) return match;
+    const hash = require('node:crypto').createHash('sha256').update(fs.readFileSync(path.join(target, file))).digest('hex').slice(0, 12);
+    return `${attribute}="${file}?v=${hash}"`;
+}));
 let size = 0;
 function measure(directory) { for (const file of fs.readdirSync(directory, { withFileTypes: true })) { const full = path.join(directory, file.name); if (file.isDirectory()) measure(full); else { const bytes = fs.statSync(full).size; if (bytes > 25 * 1024 * 1024) throw new Error('Archivo web demasiado grande: ' + full); size += bytes; } } }
 measure(target);
