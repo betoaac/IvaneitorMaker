@@ -37,3 +37,33 @@ test('imported cards without thumbnails form a responsive grid and render previe
     expect(Math.abs(mobileFirst.y - mobileSecond.y)).toBeLessThan(2);
     expect(mobileSecond.x + mobileSecond.width).toBeLessThanOrEqual(390);
 });
+
+test('gallery shows progress and usable cards before the last download, preserving them on failure', async ({ page }) => {
+    await page.route('https://accounts.google.com/**', route => route.fulfill({ body: '', contentType: 'text/javascript' }));
+    await page.goto('/');
+    await expect(page.locator('#app-status')).toContainText('Listo');
+    await page.evaluate(() => {
+        LocalCards.list = async ({ onProgress, onRecord } = {}) => {
+            onProgress?.({ completed: 0, total: 3 });
+            await new Promise(resolve => globalThis.releaseFirstCard = resolve);
+            onRecord?.({ id: 'first', data: CardCore.normalizeCard({ mainName: 'Primera', config: { setTextVal: 'KANrev' } }) });
+            onProgress?.({ completed: 1, total: 3 });
+            await new Promise(resolve => globalThis.failRemainingCards = resolve);
+            throw new Error('No se pudieron leer 2 cartas de Drive. Conexión interrumpida.');
+        };
+    });
+    await page.getByRole('button', { name: /GALERÍA/ }).click();
+    await expect(page.getByRole('progressbar', { name: 'Carga de cartas' })).toHaveAttribute('max', '3');
+    await expect(page.getByText('Cargando cartas: 0 de 3')).toBeVisible();
+    await page.evaluate(() => releaseFirstCard());
+    await expect(page.locator('.saved-card-item')).toHaveCount(1);
+    await expect(page.getByRole('progressbar')).toHaveAttribute('value', '1');
+    await expect(page.getByRole('button', { name: 'Respaldar JSON en ZIP' })).toBeDisabled();
+    const preview = page.getByRole('button', { name: 'Abrir carta Primera' });
+    await expect(preview).toBeEnabled();
+    await page.evaluate(() => failRemainingCards());
+    await expect(page.getByText(/Conexión interrumpida/).first()).toBeVisible();
+    await expect(page.locator('.saved-card-item')).toHaveCount(1);
+    await expect(page.getByRole('button', { name: 'Reintentar carga' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Respaldar JSON en ZIP' })).toBeDisabled();
+});

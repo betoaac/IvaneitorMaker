@@ -5,6 +5,9 @@ const galleryThumbCache = new Map();
 const galleryThumbQueue = [];
 let galleryThumbWorkers = 0;
 let galleryThumbObserver;
+let galleryLoadPending = false;
+let galleryLoadIncomplete = false;
+let galleryThumbnailTargets = new WeakMap();
 function paintGalleryThumbnail(img, placeholder, source) {
     if (!img.isConnected) return;
     img.src = source; img.hidden = false; placeholder.hidden = true;
@@ -115,24 +118,46 @@ async function toggleDashboard(show) {
 }
 async function renderGallery() {
     const ticket = ++galleryTicket;
-    const grid = document.getElementById('cards_grid'); grid.replaceChildren(element('p', 'Cargando biblioteca…'));
+    galleryLoadPending = true; galleryLoadIncomplete = false; libraryRecords = [];
+    galleryThumbObserver?.disconnect(); galleryThumbObserver = null; galleryThumbQueue.length = 0;
+    galleryThumbnailTargets = new WeakMap();
+    const grid = document.getElementById('cards_grid'); grid.replaceChildren();
+    document.getElementById('gallery-load')?.remove();
+    const loading = element('section', undefined, 'gallery-load'); loading.id = 'gallery-load';
+    const label = element('p', 'Buscando cartas…'); label.setAttribute('role', 'status');
+    const progress = element('progress'); progress.setAttribute('aria-label', 'Carga de cartas');
+    loading.append(label, progress, element('p', 'Las cartas aparecen mientras se descargan. Puedes abrirlas sin esperar al resto.', 'gallery-load-hint'));
+    grid.before(loading);
     try {
-        const records = await repository().list();
+        const records = await repository().list({ onProgress: ({ completed, total }) => {
+            if (ticket !== galleryTicket) return;
+            label.textContent = `Cargando cartas: ${completed} de ${total}`;
+            progress.max = Math.max(1, total); progress.value = completed;
+        }, onRecord: record => {
+            if (ticket !== galleryTicket) return;
+            libraryRecords.push(record); drawGallery();
+        } });
         if (ticket !== galleryTicket) return;
-        libraryRecords = records;
+        galleryLoadPending = false; libraryRecords = records; loading.remove();
         drawGallery();
-    } catch (error) { if (ticket === galleryTicket) { grid.replaceChildren(element('p', error.message)); status(error.message, true); } }
+    } catch (error) {
+        if (ticket !== galleryTicket) return;
+        galleryLoadPending = false; galleryLoadIncomplete = true;
+        label.textContent = `${libraryRecords.length} cartas disponibles. ${error.message}`;
+        progress.remove(); loading.append(button('Reintentar carga', renderGallery));
+        drawGallery(); status(error.message, true);
+    }
 }
 function drawGallery() {
-    galleryThumbObserver?.disconnect(); galleryThumbQueue.length = 0;
-    const thumbnailTargets = new WeakMap();
-    galleryThumbObserver = new IntersectionObserver(entries => {
+    if (!galleryThumbObserver) galleryThumbObserver = new IntersectionObserver(entries => {
         for (const entry of entries) if (entry.isIntersecting) {
             galleryThumbObserver.unobserve(entry.target);
-            galleryThumbQueue.push(thumbnailTargets.get(entry.target)); pumpGalleryThumbnails();
+            galleryThumbQueue.push(galleryThumbnailTargets.get(entry.target)); pumpGalleryThumbnails();
         }
     }, { root: document.querySelector('.dashboard-content'), rootMargin: '200px' });
-    const grid = document.getElementById('cards_grid'); grid.replaceChildren();
+    const grid = document.getElementById('cards_grid');
+    const existing = new Map([...grid.querySelectorAll('.saved-card-item')].map(item => [item.dataset.recordId, item]));
+    grid.replaceChildren();
     const setName = record => record.data.config?.setTextVal || 'SIN SET';
     const setNames = [...new Set(libraryRecords.map(setName))].sort();
     const header = element('div', undefined, 'gallery-toolbar');
@@ -143,11 +168,19 @@ function drawGallery() {
     const selected = libraryRecords.filter(record => !currentSetFilter || setName(record) === currentSetFilter).sort((a, b) => Number(a.data.config?.setNumCurr || 0) - Number(b.data.config?.setNumCurr || 0));
     const count = element('span', '', 'gallery-count'); count.setAttribute('aria-live', 'polite');
     header.append(select, count, button('Exportar CSV', () => exportSetToCSV(currentSetFilter || 'Todas', selected)), button('Descargar PNG en ZIP', () => downloadSetUltra(currentSetFilter || 'Todas', selected)), button('Respaldar JSON en ZIP', () => backupLibrary(selected)), button('Recargar', renderGallery));
+    header.querySelectorAll('button').forEach(action => action.disabled = galleryLoadPending || galleryLoadIncomplete);
+    header.lastElementChild.disabled = galleryLoadPending;
     grid.append(header);
-    if (!selected.length) grid.append(element('p', 'Aún no hay cartas. Guarda una desde el editor o importa tus JSON del escritorio.'));
+    if (!selected.length && !galleryLoadPending && !galleryLoadIncomplete) grid.append(element('p', 'Aún no hay cartas. Guarda una desde el editor o importa tus JSON del escritorio.'));
     for (const record of selected) {
+        if (existing.has(record.id)) {
+            const item = existing.get(record.id);
+            item.querySelector('.gallery-delete').disabled = galleryLoadPending;
+            grid.append(item); continue;
+        }
         const data = record.data;
         const item = element('article', undefined, 'saved-card-item');
+        item.dataset.recordId = record.id;
         item.dataset.search = `${data.mainName} ${setName(record)} ${data.config?.setNumCurr || ''} ${data.config?.rarityIcon || ''}`.toLowerCase();
         const openCard = async () => { try { await applyCard(data, record); toggleDashboard(false); } catch (error) { status(error.message, true); } };
         const preview = button('', openCard, 'card-preview'); preview.setAttribute('aria-label', `Abrir carta ${data.mainName || 'sin nombre'}`);
@@ -157,7 +190,7 @@ function drawGallery() {
         const cachedThumbnail = galleryThumbCache.get(`${record.id}:${record.revision || record.timestamp}`);
         const source = cachedThumbnail || record.thumbnail;
         if (source) { img.src = CardCore.safeImage(source); img.hidden = false; placeholder.hidden = true; }
-        else { thumbnailTargets.set(preview, { record, img, placeholder }); galleryThumbObserver.observe(preview); }
+        else { galleryThumbnailTargets.set(preview, { record, img, placeholder }); galleryThumbObserver.observe(preview); }
         const info = element('div', undefined, 'card-info');
         info.append(element('div', `${setName(record)} · ${data.config?.setNumCurr || '?'}`, 'info-line-1'), element('div', data.mainName || 'Sin nombre', 'info-line-2'));
         const actions = element('div', undefined, 'gallery-card-actions');
@@ -167,6 +200,7 @@ function drawGallery() {
             try { await repository().remove(record.id, record.revision); if (loadedRecord?.id === record.id) { loadedRecord = null; currentLoadedFilePath = null; } await renderGallery(); }
             catch (error) { status(error.message, true); }
         }, 'gallery-delete'));
+        actions.lastElementChild.disabled = galleryLoadPending;
         info.append(actions);
         item.append(info); grid.append(item);
     }

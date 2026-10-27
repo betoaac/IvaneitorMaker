@@ -47,3 +47,40 @@ test('Drive refuses oversize documents before sending and reports partial list e
     await assert.rejects(drive.save({ data: { mainName: 'A', customArtData: 'x'.repeat(6 * 1024 * 1024) } }), /supera 5 MB/);
     await assert.rejects(drive.list(), /No se pudieron leer 1/);
 });
+
+test('Drive reports loading progress and reuses only unchanged cards during the session', async () => {
+    let modifiedTime = 'first'; let mediaReads = 0;
+    const drive = new DriveCards({ token: () => 'test', fetcher: async url => {
+        if (url.includes('files?')) return json({ files: [{ id: 'one', modifiedTime }] });
+        if (url.includes('?fields=etag')) return json({ etag: modifiedTime });
+        mediaReads++; return json({ data: { mainName: 'Pikachu' } });
+    } });
+    const progress = [];
+    await drive.list({ onProgress: value => progress.push(value) });
+    assert.deepEqual(progress, [{ completed: 0, total: 1 }, { completed: 1, total: 1 }]);
+    await drive.list();
+    assert.equal(mediaReads, 1);
+    modifiedTime = 'second';
+    await drive.list();
+    assert.equal(mediaReads, 2);
+});
+
+test('Drive delivers each card before the full collection completes, including cached cards', async () => {
+    let release;
+    const blocked = new Promise(resolve => release = resolve);
+    const delivered = [];
+    const drive = new DriveCards({ token: () => 'test', fetcher: async url => {
+        if (url.includes('files?')) return json({ files: [{ id: 'one', modifiedTime: 'v1' }, { id: 'two', modifiedTime: 'v1' }] });
+        if (url.includes('/two?alt=media')) await blocked;
+        if (url.includes('?fields=etag')) return json({ etag: 'v1' });
+        return json({ data: CardCore.defaults() });
+    } });
+    const pending = drive.list({ onRecord: record => delivered.push(record.id) });
+    await new Promise(resolve => setTimeout(resolve, 20));
+    assert.deepEqual(delivered, ['one']);
+    release(); await pending;
+    assert.deepEqual(delivered.sort(), ['one', 'two']);
+    delivered.length = 0;
+    await drive.list({ onRecord: record => delivered.push(record.id) });
+    assert.deepEqual(delivered.sort(), ['one', 'two']);
+});

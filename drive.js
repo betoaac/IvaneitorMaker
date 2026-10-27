@@ -4,6 +4,7 @@
     class DriveCards {
         constructor({ token, fetcher = (...args) => root.fetch(...args), onExpired = () => {} }) {
             this.token = token; this.fetcher = fetcher; this.onExpired = onExpired;
+            this.cache = new Map();
         }
         async request(path, init = {}, upload = false, version = 3) {
             const response = await this.fetcher(`https://www.googleapis.com/${upload ? 'upload/' : ''}drive/v${version}/${path}`, {
@@ -16,7 +17,7 @@
             return response;
         }
         async profile() { return (await (await this.request('about?fields=user(displayName,emailAddress,permissionId)')).json()).user; }
-        async list() {
+        async list({ onProgress = () => {}, onRecord = () => {} } = {}) {
             const files = [];
             let pageToken = '';
             do {
@@ -28,12 +29,23 @@
             // Bounded parallelism avoids flooding Drive for a large collection.
             const records = [];
             const failures = [];
-            let index = 0;
+            let index = 0; let completed = 0;
+            onProgress({ completed, total: files.length });
+            const present = new Set(files.map(file => file.id));
+            for (const id of this.cache.keys()) if (!present.has(id)) this.cache.delete(id);
             await Promise.all(Array.from({ length: Math.min(4, files.length) }, async () => {
                 while (index < files.length) {
                     const file = files[index++];
-                    try { records.push(await this.get(file.id)); }
+                    try {
+                        const cached = this.cache.get(file.id);
+                        const record = cached && file.modifiedTime && cached.modifiedTime === file.modifiedTime
+                            ? cached.record : await this.get(file.id);
+                        records.push(record);
+                        this.cache.set(file.id, { modifiedTime: file.modifiedTime, record });
+                        onRecord(record);
+                    }
                     catch (error) { failures.push({ file, error }); }
+                    finally { onProgress({ completed: ++completed, total: files.length }); }
                 }
             }));
             if (failures.length) throw new Error(`No se pudieron leer ${failures.length} cartas de Drive. ${failures[0].error.message}`);
@@ -56,6 +68,7 @@
             return record;
         }
         async save(record, revision) {
+            this.cache.delete(record.id);
             if (record.remote && !revision) throw new Error('Drive no entregó una revisión para esta carta. Exporta un JSON o guárdala como nueva; no se sobrescribió el archivo.');
             const body = JSON.stringify({ schemaVersion: 1, ...record, revision: undefined });
             if (new Blob([body]).size > 5 * 1024 * 1024) throw new Error('La carta supera 5 MB. Reduce sus imágenes antes de guardarla en Drive.');
@@ -72,6 +85,7 @@
             return this.get(saved.id || record.id);
         }
         async remove(id, revision) {
+            this.cache.delete(id);
             await this.request(`files/${encodeURIComponent(id)}`, { method: 'DELETE', headers: revision ? { 'If-Match': revision } : {} }, false, 2);
         }
     }
