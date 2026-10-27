@@ -8,6 +8,37 @@ let galleryThumbObserver;
 let galleryLoadPending = false;
 let galleryLoadIncomplete = false;
 let galleryThumbnailTargets = new WeakMap();
+async function makeCardThumbnail(data) {
+    const canvas = document.createElement('canvas');
+    try {
+        await renderCardSnapshot(CardCore.normalizeCard(data, defaultConfig), canvas, { multiplier: 0.5 });
+        return canvas.toDataURL('image/webp', 0.82);
+    } finally { canvas.width = canvas.height = 0; }
+}
+async function withFullCards(records, action) {
+    if (libraryBusy) return;
+    libraryBusy = true;
+    const panel = element('section', undefined, 'gallery-load');
+    const label = element('p', 'Preparando cartas…'); label.setAttribute('role', 'status');
+    const progress = element('progress'); progress.max = Math.max(1, records.length); progress.value = 0;
+    progress.setAttribute('aria-label', 'Descarga de cartas'); panel.append(label, progress);
+    document.getElementById('cards_grid').before(panel);
+    panel.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    try {
+        const store = repository(); const full = [];
+        for (const record of records) {
+            label.textContent = `Descargando carta ${full.length + 1} de ${records.length}: ${record.data.mainName || 'Carta'}`;
+            full.push(record.summary ? await store.get(record.id) : record);
+            progress.value = full.length;
+        }
+        label.textContent = 'Cartas descargadas. Preparando resultado…';
+        return await action(full);
+    } catch (error) {
+        label.textContent = error.message; progress.remove(); status(error.message, true);
+        panel.append(button('Cerrar aviso', () => panel.remove()));
+        return;
+    } finally { libraryBusy = false; if (progress.isConnected) panel.remove(); }
+}
 function paintGalleryThumbnail(img, placeholder, source) {
     if (!img.isConnected) return;
     img.src = source; img.hidden = false; placeholder.hidden = true;
@@ -59,7 +90,7 @@ function chooseSaveAction() {
     });
 }
 async function saveSystemCard() {
-    if (savingCard) return;
+    if (savingCard || libraryBusy) return;
     savingCard = true;
     cancelLookup();
     let existing = loadedRecord ? structuredClone(loadedRecord) : null;
@@ -80,7 +111,7 @@ async function saveSystemCard() {
         const set = snapshot.config.setTextVal.trim().toLowerCase();
         const num = snapshot.config.setNumCurr.trim();
         if (set && num) {
-            const cards = await store.list();
+            const cards = await store.list({ summaries: true });
             if (cards.some(x => x.id !== existing?.id && x.data.config?.setTextVal?.trim().toLowerCase() === set && x.data.config?.setNumCurr === num) && !confirm('Ya existe otra carta con ese set y número. ¿Guardar de todas formas?')) return;
         }
         const record = { id: existing?.id || crypto.randomUUID(), remote: existing?.remote || false, timestamp: Date.now(), data: snapshot, thumbnail };
@@ -106,7 +137,7 @@ async function saveSystemCard() {
         const saved = await store.save(record, existing?.revision);
         loadedRecord = saved; currentLoadedFilePath = saved.id;
         if (!CloudAuth.usingDrive()) { clearTimeout(draftTimer); await LocalCards.saveDraft(snapshot); }
-        status(CloudAuth.connected() ? 'Carta guardada y confirmada en Google Drive.' : 'Carta guardada en la biblioteca de este navegador.');
+        status(CloudAuth.connected() ? 'Carta guardada y confirmada en Google Drive.' + (saved.previewPending ? ' Su miniatura se preparará al cargar la galería.' : '') : 'Carta guardada en la biblioteca de este navegador.');
         await toggleDashboard(true);
     } catch (error) { status('No se confirmó el guardado: ' + error.message, true); }
     finally { if (canvas) canvas.width = canvas.height = 0; savingCard = false; }
@@ -132,12 +163,12 @@ async function renderGallery() {
     const loading = element('section', undefined, 'gallery-load'); loading.id = 'gallery-load';
     const label = element('p', 'Buscando cartas…'); label.setAttribute('role', 'status');
     const progress = element('progress'); progress.setAttribute('aria-label', 'Carga de cartas');
-    loading.append(label, progress, element('p', 'Las cartas aparecen mientras se descargan. Puedes abrirlas sin esperar al resto.', 'gallery-load-hint'));
+    loading.append(label, progress, element('p', 'La galería carga miniaturas. Los originales se descargan al abrir, exportar o respaldar las cartas.', 'gallery-load-hint'));
     grid.before(loading);
     try {
-        const records = await repository().list({ onProgress: ({ completed, total }) => {
+        const records = await repository().list({ summaries: true, onProgress: ({ completed, total, preparing }) => {
             if (ticket !== galleryTicket) return;
-            label.textContent = `Cargando cartas: ${completed} de ${total}`;
+            label.textContent = preparing ? `Preparando miniaturas antiguas: ${completed} de ${total}. Solo se necesita una vez.` : `Cargando cartas: ${completed} de ${total}`;
             progress.max = Math.max(1, total); progress.value = completed;
         }, onRecord: record => {
             if (ticket !== galleryTicket) return;
@@ -174,7 +205,7 @@ function drawGallery() {
     select.value = currentSetFilter || ''; select.onchange = () => { currentSetFilter = select.value || null; drawGallery(); };
     const selected = libraryRecords.filter(record => !currentSetFilter || setName(record) === currentSetFilter).sort((a, b) => Number(a.data.config?.setNumCurr || 0) - Number(b.data.config?.setNumCurr || 0));
     const count = element('span', '', 'gallery-count'); count.setAttribute('aria-live', 'polite');
-    header.append(source, select, count, button('Exportar CSV', () => exportSetToCSV(currentSetFilter || 'Todas', selected)), button('Descargar PNG en ZIP', () => downloadSetUltra(currentSetFilter || 'Todas', selected)), button('Respaldar JSON en ZIP', () => backupLibrary(selected)), button('Recargar', renderGallery));
+    header.append(source, select, count, button('Exportar CSV', () => withFullCards(selected, full => exportSetToCSV(currentSetFilter || 'Todas', full))), button('Descargar PNG en ZIP', () => withFullCards(selected, full => downloadSetUltra(currentSetFilter || 'Todas', full))), button('Respaldar JSON en ZIP', () => withFullCards(selected, backupLibrary)), button('Recargar', renderGallery));
     header.querySelectorAll('button').forEach(action => action.disabled = galleryLoadPending || galleryLoadIncomplete);
     header.lastElementChild.disabled = galleryLoadPending;
     grid.append(header);
@@ -189,7 +220,7 @@ function drawGallery() {
         const item = element('article', undefined, 'saved-card-item');
         item.dataset.recordId = record.id;
         item.dataset.search = `${data.mainName} ${setName(record)} ${data.config?.setNumCurr || ''} ${data.config?.rarityIcon || ''}`.toLowerCase();
-        const openCard = async () => { try { await applyCard(data, record); toggleDashboard(false); } catch (error) { status(error.message, true); } };
+        const openCard = () => withFullCards([record], async ([full]) => { await applyCard(full.data, full); toggleDashboard(false); });
         const preview = button('', openCard, 'card-preview'); preview.setAttribute('aria-label', `Abrir carta ${data.mainName || 'sin nombre'}`);
         const img = element('img', undefined, 'card-thumb'); img.alt = data.mainName || 'Carta'; img.loading = 'lazy'; img.decoding = 'async'; img.hidden = true;
         const placeholder = element('span', 'Preparando miniatura…', 'card-preview-placeholder');

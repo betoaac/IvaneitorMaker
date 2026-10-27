@@ -54,4 +54,37 @@
         saveDraft(data) { return transaction('readwrite', store => store.put({ id: 'draft', data })); },
         getDraft() { return transaction('readonly', store => store.get('draft')); }
     };
+    // Separate from editable cards/drafts; contains only account-scoped lightweight previews.
+    let previewDatabase;
+    async function previewTransaction(mode, action) {
+        if (!previewDatabase) previewDatabase = new Promise((resolve, reject) => {
+            const request = indexedDB.open('ivaneitormaker-drive-previews-v1', 1);
+            request.onupgradeneeded = () => request.result.createObjectStore('previews', { keyPath: 'key' });
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+            request.onblocked = () => reject(new Error('Caché de miniaturas bloqueada.'));
+        });
+        const db = await previewDatabase;
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction('previews', mode);
+            const request = action(tx.objectStore('previews'));
+            tx.oncomplete = () => resolve(request?.result);
+            tx.onabort = tx.onerror = () => reject(tx.error);
+        });
+    }
+    root.DrivePreviewCache = {
+        async get(account, id, version) {
+            const entry = await previewTransaction('readonly', store => store.get(JSON.stringify([account, id])));
+            return entry?.version === version ? entry.value : undefined;
+        },
+        async put(account, id, version, value) {
+            await previewTransaction('readwrite', store => store.put({ key: JSON.stringify([account, id]), account, version, value }));
+        },
+        async clear(account) {
+            await previewTransaction('readwrite', store => {
+                const request = store.openCursor();
+                request.onsuccess = () => { const cursor = request.result; if (!cursor) return; if (cursor.value.account === account) cursor.delete(); cursor.continue(); };
+            });
+        }
+    };
 })(globalThis);

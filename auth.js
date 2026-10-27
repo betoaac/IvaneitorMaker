@@ -62,7 +62,7 @@ const CloudAuth = (() => {
                 driveDestination = true;
                 expiresAt = Date.now() + Math.max(0, Number(response.expires_in) - 30) * 1000;
                 const issuedToken = accessToken;
-                drive = new DriveCards({ token: () => issuedToken, onExpired: () => { if (accessToken === issuedToken) expired(); } });
+                drive = new DriveCards({ token: () => issuedToken, createThumbnail: async record => record.thumbnail || makeCardThumbnail(record.data), onExpired: () => { if (accessToken === issuedToken) expired(); } });
                 loadedRecord = null; currentLoadedFilePath = null; libraryRecords = [];
                 galleryTicket++;
                 try {
@@ -92,7 +92,9 @@ const CloudAuth = (() => {
         if (savingCard || batchRunning || libraryBusy || connecting) { status('Espera a que termine la operación actual.', true); return; }
         if (!confirm('¿Desconectar Google? Exporta JSON si tienes cambios de Drive que aún no guardaste.')) return;
         const token = accessToken;
+        const accountId = drive?.accountId;
         driveDestination = false; rememberDrive(false); clear(); cancelLookup(); clearTimeout(draftTimer);
+        if (accountId) { try { await DrivePreviewCache.clear(accountId); } catch { /* Cache cleanup is best effort. */ } }
         // Explicit disconnect revokes consent; automatic expiration only clears memory.
         if (token && globalThis.google?.accounts?.oauth2) google.accounts.oauth2.revoke(token, () => {});
         initialized = false;

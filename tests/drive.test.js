@@ -84,3 +84,65 @@ test('Drive delivers each card before the full collection completes, including c
     await drive.list({ onRecord: record => delivered.push(record.id) });
     assert.deepEqual(delivered.sort(), ['one', 'two']);
 });
+
+test('summary gallery downloads previews only and reuses persistent cache across sessions by account and modification time', async () => {
+    const rows = new Map(); let previewReads = 0; let originals = 0; let modifiedTime = 'time-1'; let account = 'account-A';
+    const previewStore = { get: async (account, id, version) => rows.get(`${account}:${id}:${version}`), put: async (account, id, version, value) => rows.set(`${account}:${id}:${version}`, value) };
+    const fetcher = async url => {
+        if (url.includes('about?')) return json({ user: { permissionId: account } });
+        if (url.includes('files?')) {
+            if (decodeURIComponent(url).includes('pokecard-preview-v1')) return json({ files: [{ id: 'preview', appProperties: { cardId: 'card', sourceModifiedTime: modifiedTime } }] });
+            return json({ files: [{ id: 'card', modifiedTime }] });
+        }
+        if (url.includes('/preview?alt=media')) { previewReads++; return json({ schemaVersion: 1, cardId: 'card', sourceModifiedTime: modifiedTime, revision: 'etag', thumbnail: 'data:image/webp;base64,dGVzdA==', data: { mainName: 'Pikachu', config: { setTextVal: 'KANrev', setNumCurr: '1' } } }); }
+        originals++; throw new Error('Gallery requested an original');
+    };
+    const first = new DriveCards({ token: () => 'one', fetcher, previewStore }); await first.profile();
+    const records = await first.list({ summaries: true });
+    assert.equal(records[0].summary, true); assert.equal(records[0].data.mainName, 'Pikachu');
+    const reloaded = new DriveCards({ token: () => 'two', fetcher, previewStore }); await reloaded.profile();
+    await reloaded.list({ summaries: true }); assert.equal(previewReads, 1); assert.equal(originals, 0);
+    modifiedTime = 'time-2'; await reloaded.list({ summaries: true }); assert.equal(previewReads, 2);
+    assert.ok([...rows.keys()].every(key => key.startsWith('account-A:')));
+    account = 'account-B';
+    const other = new DriveCards({ token: () => 'other', fetcher, previewStore }); await other.profile();
+    await other.list({ summaries: true }); assert.equal(previewReads, 3); assert.equal(originals, 0);
+    assert.ok([...rows.keys()].some(key => key.startsWith('account-B:')));
+});
+
+test('legacy cards prepare separate previews once without rewriting original files', async () => {
+    let preview; let originalReads = 0; const writes = [];
+    const thumbnail = 'data:image/webp;base64,dGVzdA==';
+    const fetcher = async (url, init) => {
+        if (init.method === 'POST' || init.method === 'PATCH' || init.method === 'PUT') {
+            writes.push({ url, method: init.method });
+            const part = init.body.split('Content-Type: application/json\r\n\r\n')[1];
+            preview = JSON.parse(part.slice(0, part.lastIndexOf('\r\n--')));
+            return json({ id: 'preview' });
+        }
+        if (url.includes('files?')) {
+            if (decodeURIComponent(url).includes('pokecard-preview-v1')) return json({ files: preview ? [{ id: 'preview', appProperties: { cardId: 'card', sourceModifiedTime: 'time-1' } }] : [] });
+            return json({ files: [{ id: 'card', modifiedTime: 'time-1' }] });
+        }
+        if (url.includes('/preview?alt=media')) return json(preview);
+        if (url.includes('?fields=etag')) return json({ etag: 'v1' });
+        originalReads++; return json({ data: { mainName: 'Pikachu', customArtData: thumbnail, abilityName: 'Original intacto' } });
+    };
+    const options = { token: () => 'test', fetcher, createThumbnail: async () => thumbnail };
+    const first = new DriveCards(options);
+    const progress = [];
+    await first.list({ summaries: true, onProgress: value => progress.push(value) });
+    assert.equal(originalReads, 1); assert.ok(progress.some(value => value.preparing));
+    assert.equal(writes.length, 1); assert.equal(writes[0].method, 'POST');
+    assert.ok(!writes[0].url.includes('/files/card'));
+    assert.equal(preview.data.customArtData, undefined); assert.equal(preview.data.abilityName, undefined);
+    await new DriveCards(options).list({ summaries: true });
+    assert.equal(originalReads, 1); assert.equal(writes.length, 1);
+});
+
+test('Drive refuses to overwrite an original with a lightweight summary', async () => {
+    let requests = 0;
+    const drive = new DriveCards({ token: () => 'test', fetcher: async () => { requests++; throw new Error('Must not send'); } });
+    await assert.rejects(drive.save({ summary: true, data: { mainName: 'Miniatura' } }, 'etag'), /carta completa/);
+    assert.equal(requests, 0);
+});
