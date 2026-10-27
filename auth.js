@@ -4,21 +4,46 @@ const CloudAuth = (() => {
     let expiryTimer;
     let drive = null;
     let connecting = false;
+    const preferenceKey = 'ivaneitormaker-drive-preferred';
     let driveDestination = false;
+    try { driveDestination = localStorage.getItem(preferenceKey) === 'true'; } catch { /* Storage may be blocked. */ }
+    function rememberDrive(preferred) {
+        try {
+            if (preferred) localStorage.setItem(preferenceKey, 'true');
+            else localStorage.removeItem(preferenceKey);
+        } catch { /* Authentication still works without persistent preferences. */ }
+    }
     function connected() { return !!accessToken && Date.now() < expiresAt; }
+    function needsReconnect() { return driveDestination && !connected(); }
+    function disconnectedUI() {
+        document.getElementById('account-label').textContent = driveDestination ? 'Drive · pendiente de reconectar' : 'Biblioteca de este navegador';
+        document.getElementById('google-connect').textContent = driveDestination ? 'Reconectar con Google' : 'Conectar con Google';
+        document.getElementById('google-connect').hidden = false;
+        document.getElementById('google-disconnect').hidden = true;
+        document.getElementById('google-local').hidden = !driveDestination;
+    }
+    function restore() {
+        if (!needsReconnect()) return;
+        disconnectedUI();
+        status('Usabas Google Drive. Reconecta para ver tus cartas; aún no se ha consultado tu biblioteca de Drive.');
+    }
+    function useLocal() {
+        if (connecting || savingCard || batchRunning || libraryBusy || connected()) return;
+        driveDestination = false; rememberDrive(false); clear();
+        status('Biblioteca local seleccionada. Las cartas de Drive siguen en tu cuenta.');
+        if (document.getElementById('dashboard-overlay').style.display === 'flex') renderGallery();
+    }
     function clear() {
         clearTimeout(expiryTimer); accessToken = ''; expiresAt = 0; drive = null;
         loadedRecord = null; currentLoadedFilePath = null; libraryRecords = [];
         galleryTicket++;
-        document.getElementById('account-label').textContent = 'Biblioteca de este navegador';
-        document.getElementById('google-connect').hidden = false;
-        document.getElementById('google-disconnect').hidden = true;
+        disconnectedUI();
     }
     function expired() {
         clear(); status('La sesión de Google expiró. Reconecta para seguir usando Drive. El editor conserva tus cambios.', true);
         document.getElementById('account-label').textContent = 'Drive · sesión expirada';
         document.getElementById('google-disconnect').hidden = false;
-        document.getElementById('cards_grid').replaceChildren();
+        if (document.getElementById('dashboard-overlay').style.display === 'flex') renderGallery();
     }
     function connect() {
         if (connecting) return;
@@ -42,9 +67,11 @@ const CloudAuth = (() => {
                 galleryTicket++;
                 try {
                     const profile = await drive.profile();
+                    rememberDrive(true);
                     document.getElementById('account-label').textContent = 'Drive · ' + (profile.emailAddress || profile.displayName);
                     document.getElementById('google-connect').hidden = true;
                     document.getElementById('google-disconnect').hidden = false;
+                    document.getElementById('google-local').hidden = true;
                     expiryTimer = setTimeout(expired, Math.max(0, expiresAt - Date.now()));
                     status('Google conectado. Guardar enviará esta carta a tu Drive.');
                     if (document.getElementById('dashboard-overlay').style.display === 'flex') await renderGallery();
@@ -58,13 +85,14 @@ const CloudAuth = (() => {
             }
         });
         // Must stay in a user gesture; never request a popup from a timer or API retry.
-        client.requestAccessToken({ prompt: 'select_account' });
+        try { client.requestAccessToken({ prompt: driveDestination ? '' : 'select_account' }); }
+        catch { connecting = false; status('No se pudo abrir Google. Pulsa Reconectar para volver a intentarlo.', true); }
     }
     async function disconnect() {
         if (savingCard || batchRunning || libraryBusy || connecting) { status('Espera a que termine la operación actual.', true); return; }
         if (!confirm('¿Desconectar Google? Exporta JSON si tienes cambios de Drive que aún no guardaste.')) return;
         const token = accessToken;
-        clear(); driveDestination = false; cancelLookup(); clearTimeout(draftTimer);
+        driveDestination = false; rememberDrive(false); clear(); cancelLookup(); clearTimeout(draftTimer);
         // Explicit disconnect revokes consent; automatic expiration only clears memory.
         if (token && globalThis.google?.accounts?.oauth2) google.accounts.oauth2.revoke(token, () => {});
         initialized = false;
@@ -72,5 +100,5 @@ const CloudAuth = (() => {
         initialized = true;
         status('Google desconectado. Tus cartas de Drive siguen en tu cuenta.');
     }
-    return { connect, disconnect, connected, usingDrive: () => driveDestination, store: () => { if (!connected()) throw new Error('Reconecta Google para usar Drive.'); return drive; } };
+    return { connect, disconnect, connected, restore, useLocal, needsReconnect, usingDrive: () => driveDestination, store: () => { if (!connected()) throw new Error('Reconecta Google para usar Drive.'); return drive; } };
 })();

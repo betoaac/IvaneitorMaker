@@ -123,6 +123,12 @@ async function renderGallery() {
     galleryThumbnailTargets = new WeakMap();
     const grid = document.getElementById('cards_grid'); grid.replaceChildren();
     document.getElementById('gallery-load')?.remove();
+    if (CloudAuth.needsReconnect()) {
+        galleryLoadPending = false;
+        const notice = element('section', undefined, 'gallery-reconnect');
+        notice.append(element('h3', 'Reconecta Google Drive para ver tus cartas'), element('p', 'La conexión se cerró al recargar o al expirar la sesión. Todavía no hemos consultado tus cartas de Drive; esta pantalla no significa que tu colección esté vacía.'), button('Reconectar Google Drive', () => CloudAuth.connect()), button('Usar biblioteca local', () => CloudAuth.useLocal()));
+        grid.append(notice); return;
+    }
     const loading = element('section', undefined, 'gallery-load'); loading.id = 'gallery-load';
     const label = element('p', 'Buscando cartas…'); label.setAttribute('role', 'status');
     const progress = element('progress'); progress.setAttribute('aria-label', 'Carga de cartas');
@@ -161,13 +167,14 @@ function drawGallery() {
     const setName = record => record.data.config?.setTextVal || 'SIN SET';
     const setNames = [...new Set(libraryRecords.map(setName))].sort();
     const header = element('div', undefined, 'gallery-toolbar');
+    const source = element('span', CloudAuth.usingDrive() ? 'Google Drive' : 'Biblioteca local', 'gallery-source');
     const select = element('select'); select.setAttribute('aria-label', 'Colección');
     const all = element('option', 'Todas las colecciones'); all.value = ''; select.append(all);
     for (const name of setNames) { const option = element('option', name); option.value = name; select.append(option); }
     select.value = currentSetFilter || ''; select.onchange = () => { currentSetFilter = select.value || null; drawGallery(); };
     const selected = libraryRecords.filter(record => !currentSetFilter || setName(record) === currentSetFilter).sort((a, b) => Number(a.data.config?.setNumCurr || 0) - Number(b.data.config?.setNumCurr || 0));
     const count = element('span', '', 'gallery-count'); count.setAttribute('aria-live', 'polite');
-    header.append(select, count, button('Exportar CSV', () => exportSetToCSV(currentSetFilter || 'Todas', selected)), button('Descargar PNG en ZIP', () => downloadSetUltra(currentSetFilter || 'Todas', selected)), button('Respaldar JSON en ZIP', () => backupLibrary(selected)), button('Recargar', renderGallery));
+    header.append(source, select, count, button('Exportar CSV', () => exportSetToCSV(currentSetFilter || 'Todas', selected)), button('Descargar PNG en ZIP', () => downloadSetUltra(currentSetFilter || 'Todas', selected)), button('Respaldar JSON en ZIP', () => backupLibrary(selected)), button('Recargar', renderGallery));
     header.querySelectorAll('button').forEach(action => action.disabled = galleryLoadPending || galleryLoadIncomplete);
     header.lastElementChild.disabled = galleryLoadPending;
     grid.append(header);

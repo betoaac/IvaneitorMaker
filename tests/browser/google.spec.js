@@ -43,4 +43,30 @@ test('Google UI and Drive create/update round trip with simulated responses', as
     await expect.poll(() => stored.data.namePrefix).toBe('Actualizada');
     expect(requests.some(r => r.method === 'PUT' && r.revision === 'etag-1')).toBe(true);
     expect(requests.every(r => r.auth === 'Bearer mock-token')).toBe(true);
+    await page.reload();
+    await expect(page.locator('#account-label')).toHaveText('Drive · pendiente de reconectar');
+    await page.getByRole('button', { name: /GALERÍA/ }).click();
+    await page.getByRole('button', { name: 'Reconectar Google Drive', exact: true }).click();
+    await expect(page.locator('#account-label')).toHaveText('Drive · mock@example.test');
+    await expect(page.locator('.saved-card-item')).toHaveCount(1);
+    await expect(page.locator('.gallery-source')).toHaveText('Google Drive');
+});
+
+test('remembered Drive shows reconnect instead of a misleading empty gallery after reload', async ({ page }) => {
+    await page.route('https://accounts.google.com/**', route => route.fulfill({ body: '', contentType: 'text/javascript' }));
+    await page.goto('/');
+    await expect(page.locator('#app-status')).toContainText('Listo');
+    await page.evaluate(() => localStorage.setItem('ivaneitormaker-drive-preferred', 'true'));
+    await page.reload();
+    await expect(page.locator('#account-label')).toHaveText('Drive · pendiente de reconectar');
+    await page.getByRole('button', { name: /GALERÍA/ }).click();
+    await expect(page.getByRole('heading', { name: 'Reconecta Google Drive para ver tus cartas' })).toBeVisible();
+    await expect(page.getByText('0 cartas', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Reconectar Google Drive', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Usar biblioteca local', exact: true }).last().click();
+    await expect(page.locator('.gallery-count')).toHaveText('0 cartas');
+    await expect(page.locator('#account-label')).toHaveText('Biblioteca de este navegador');
+    expect(await page.evaluate(() => localStorage.getItem('ivaneitormaker-drive-preferred'))).toBeNull();
+    await page.reload();
+    await expect(page.locator('#account-label')).toHaveText('Biblioteca de este navegador');
 });

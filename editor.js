@@ -255,4 +255,5 @@ window.addEventListener('load', async () => {
         else if (legacy) await applyCard(JSON.parse(legacy));
         else status('Listo. Guarda en este navegador o conecta Google Drive.');
     } catch (error) { status('No se pudo recuperar el borrador: ' + error.message, true); }
+    CloudAuth.restore();
 });
