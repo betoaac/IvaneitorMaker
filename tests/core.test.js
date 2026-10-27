@@ -37,7 +37,7 @@ test('background mapping selects Hada and keeps legacy Cookie/Estelar compatible
             const expected = `web-assets/bordes/PokemonTGC_Plantilla_GALLETA_${stage === 'Basico' ? 'Basico' : 'Fase1'}.webp`;
             const key = Core.backgroundPath(Core.normalizeCard({ tcgType: type }).tcgType, stage);
             assert.equal(context.CARD_ASSETS[key], expected);
-            assert.equal(context.CARD_EXPORT_ASSETS[key] || context.CARD_ASSETS[key], expected);
+            assert.equal(context.CARD_EXPORT_ASSETS[key] || context.CARD_ASSETS[key], stage === 'Basico' ? expected.replace('web-assets/bordes/', 'web-assets/export/bordes/') : expected);
             assert.equal(Core.backgroundPath(type, stage), key);
             assert.ok(require('node:fs').existsSync(require('node:path').join(__dirname, '..', expected)));
         }
