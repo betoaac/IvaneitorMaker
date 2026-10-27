@@ -33,10 +33,10 @@ test('custom background is embedded in portable JSON and survives import', async
     // Small real PNG, including transparency, rather than relying on external media.
     const png = Buffer.from(await page.evaluate(() => { const c = document.createElement('canvas'); c.width = c.height = 2; c.getContext('2d').fillRect(0, 0, 1, 1); return c.toDataURL('image/png').split(',')[1]; }), 'base64');
     await page.locator('#background-file').setInputFiles({ name: 'background.png', mimeType: 'image/png', buffer: png });
-    await expect.poll(() => page.evaluate(() => cardData.backgroundData?.startsWith('data:image/webp;'))).toBe(true);
+    await expect.poll(() => page.evaluate(() => cardData.backgroundData?.startsWith('data:image/png;'))).toBe(true);
     const download = page.waitForEvent('download'); await page.getByRole('button', { name: 'JSON ⬇' }).click();
     const data = JSON.parse(fs.readFileSync(await (await download).path(), 'utf8'));
-    expect(data.backgroundData).toMatch(/^data:image\/webp;base64,/);
+    expect(data.backgroundData).toBe('data:image/png;base64,' + png.toString('base64'));
     await page.getByRole('button', { name: /GALERÍA/ }).click(); await page.getByRole('button', { name: /Carta en blanco/ }).click();
     expect(await page.evaluate(() => cardData.backgroundData)).toBeNull();
     await page.locator('input[accept=".json"]').first().setInputFiles({ name: 'portable.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(data)) });

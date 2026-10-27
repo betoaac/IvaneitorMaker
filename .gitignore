@@ -20,6 +20,7 @@ scripts/*.original.*.txt
 /seticon/
 /tags/
 fuentes/*_old
+__pycache__/
 scripts/migrate_editor.py
 scripts/finish_editor.py
 scripts/prepare_html.py

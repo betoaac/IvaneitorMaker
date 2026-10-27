@@ -32,7 +32,7 @@ async function downloadSetUltra(setName, records) {
             try {
                 const data = CardCore.normalizeCard(inputs[index], defaultConfig);
                 label.textContent = `Generando ${index + 1}/${inputs.length}: ${data.mainName || 'Carta'}`;
-                await renderCardSnapshot(data, canvas, { multiplier });
+                await renderCardSnapshot(data, canvas, { multiplier, fullResolution: true });
                 const png = new Uint8Array(await (await CardImages.canvasBlob(canvas)).arrayBuffer());
                 const name = `${String(index + 1).padStart(5, '0')}_${CardCore.fileName(data, 'png')}`;
                 entries[name] = png; bytes += png.byteLength; succeeded++;

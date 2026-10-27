@@ -246,6 +246,8 @@
                 <div class="input-group" style="margin-top: 10px;">
                     <label>Tipo de la Carta</label>
                     <div id="tcg_type_selector" class="type-selector-group"></div>
+                    <label style="font-size:12px; margin:8px 0; color:#ccc;"><input id="compress_uploads" type="checkbox" style="width:auto;"> Comprimir nuevas imágenes y fondos (WebP 95, misma resolución)</label>
+                    <p style="font-size:11px;color:#aaa;">Desactivado: conserva el archivo (hasta 10 MB). Activado: reduce peso con posible pérdida de detalle (entrada hasta 20 MB). Solo afecta imágenes que cargues o dupliques después. Drive admite hasta 5 MB por carta.</p>
                     <details class="background-tools"><summary>Fondo personalizado de esta carta</summary>
                         <p>Se incluye al guardar o exportar el JSON. Cookie usa Normal hasta que cargues tu fondo; Hada ya tiene el suyo. El fondo se mantiene al cambiar tipo o etapa hasta pulsar Original.</p>
                         <label class="file-button">Cargar fondo PNG / JPG / WebP<input id="background-file" type="file" accept="image/png,image/jpeg,image/webp" onchange="loadRasterInput(this, 'backgroundData')"></label>

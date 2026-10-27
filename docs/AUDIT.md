@@ -32,7 +32,7 @@ Se realizó revisión independiente adicional, probes con VM, pruebas Node y pru
 | Media | CSS y `main.js:167` | Fuente y arte inicial apuntan a archivos ausentes | Fuente existente y arte local existente; manifest de recursos |
 | Media | `main.js:1720,1762` | `[g]` se parsea distinto a `[G]` | Lookup normalizado a mayúsculas |
 | Media | `main.js:1472` | Debilidad siempre multiplica aunque se escribe +20 | Se dibuja + o multiplicador según el dato |
-| Media | `main.js:952`, fondos | Caché decodificada sin límite; PNG gigantes y canvas UHD | Caché de 20 imágenes, previews 1x, fondos optimizados y liberación de temporales; lotes por partes |
+| Media | `main.js:952`, fondos | Caché decodificada sin límite; PNG gigantes y canvas UHD | Caché limitada por bytes decodificados (96 MB) y 20 entradas, previews 1x, fondos optimizados y liberación de temporales; lotes por partes |
 | Media | `main.js:2153–2167` | Texto importado enorme en algoritmo de composición de flavor | Límites de texto y profundidad de JSON; no se reescribió el algoritmo tipográfico |
 | Media | HTML/controles | Sin viewport, layout móvil fijo, quitar energía depende de clic derecho | Viewport, adaptación móvil, foco visible, controles con teclado y botón −; falta auditoría WCAG exhaustiva |
 | Alta | Integración nueva | Cambio de cuenta durante importación/perfil podría mezclar bibliotecas | Operaciones bloquean cambio de sesión; token ligado a repositorio; invalidación de consultas; prueba de carrera de cuentas |
@@ -46,7 +46,7 @@ La web utiliza `fflate` 0.8.3 para ZIP y Playwright para pruebas. `npm audit` de
 
 ## Verificación y límites del resultado
 
-El artefacto final ocupa **20,2 MB**. Se optimizaron **1565 imágenes de 360,8 MB a 16,2 MB**, sin modificar los originales. Se verificaron todas las rutas y sus mayúsculas para alojamiento Linux. La validación local ejecutó **11 pruebas Node y 9 pruebas de navegador**, incluyendo un recorrido UI Google/Drive con respuestas simuladas.
+La primera versión preparada ocupaba **20,2 MB**; estas cifras preceden a la corrección de calidad descrita en QUALITY.md. Se optimizaron **1565 imágenes de 360,8 MB a 16,2 MB**, sin modificar los originales. Se verificaron todas las rutas y sus mayúsculas para alojamiento Linux. La validación local ejecutó **11 pruebas Node y 9 pruebas de navegador**, incluyendo un recorrido UI Google/Drive con respuestas simuladas.
 
 Las pruebas cubren normalización/archivos malformados, nombres, CSV, mapeo Hada/Cookie, paginación Drive, expiración, conflictos, límite de documentos, carrera de cuentas; en Chrome prueban los tipos y rich text, import/reset, PNG real, galería/persistencia/XSS textual, lote con errores y edición simultánea, y adaptación móvil. Los escenarios están en `tests/` y pueden reejecutarse con los comandos del README.
 
@@ -60,6 +60,6 @@ Puntos que permanecen deliberadamente visibles:
 - Si una creación remota termina en timeout, su estado es ambiguo: la app no reintenta automáticamente y se debe recargar la galería antes de repetir Guardar.
 - Borradores locales tienen debounce de 500 ms: cerrar antes puede perder el último cambio no guardado. Guardar explícitamente confirma el registro; no depende de ese temporizador.
 - Los enlaces ZIP retienen los resultados mientras están disponibles. Para colecciones muy grandes se recomienda trabajar por set.
-- La compresión reduce detalle de fondos; 4x exporta texto a esa resolución y amplía el fondo reducido. Los originales de 5000 px siguen intactos localmente.
+- Corregido después de esta auditoría: las exportaciones ya usan fondos a la resolución final con compresión sin pérdida; las copias ligeras solo se usan en la vista previa. Los originales de 5000 px siguen intactos. Ver QUALITY.md.
 
 La conclusión es **preparado y probado localmente para publicación estática**, con **integración Google implementada pendiente de activación y prueba real**. No equivale a producción certificada ni a una actualización del instalador Electron original.

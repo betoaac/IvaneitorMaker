@@ -47,10 +47,10 @@ Ver [auditoría completa](docs/AUDIT.md) y [decisión de arquitectura](docs/ARCH
 
 - La carpeta `appDataFolder` de Drive es privada de la aplicación y no aparece como una carpeta normal en Mi unidad. Usa Galería → Respaldar JSON para exportar tus datos. Cuenta dentro del espacio disponible del usuario y depende de las cuotas de Google.
 - Los tokens solo están en memoria. Tras expirar o recargar, hay que volver a conectar. Una sesión expirada no cambia silenciosamente el destino de guardado a local.
-- Un JSON de importación puede tener hasta 24 MB; el documento enviado a Drive debe tener como máximo 5 MB. Las imágenes cargadas se reducen a WebP. No hay subida reanudable de archivos grandes en esta versión.
+- Un JSON de importación puede tener hasta 24 MB; el documento enviado a Drive debe tener como máximo 5 MB. Las imágenes cargadas conservan sus bytes y dimensiones; un archivo grande puede requerir optimización manual para entrar en ese límite. No se degrada silenciosamente para que quepa. Puedes activar Comprimir nuevas imágenes y fondos (WebP 95) antes de cargar o duplicar: mantiene las dimensiones y acepta una pérdida de detalle para reducir peso. Está desactivado por defecto. No hay subida reanudable de archivos grandes en esta versión.
 - Las actualizaciones remotas usan ETag/If-Match. Si el navegador/API no entrega ETag, se bloquea la actualización y se permite exportar o guardar como nueva. Falta verificar este flujo contra Drive real.
 - Las partes ZIP quedan disponibles en la pestaña hasta otra exportación o cerrar la página. Para colecciones muy grandes conviene exportar por set: los enlaces de descarga también retienen datos del resultado.
-- Los fondos publicados se limitan a 1494×2080 px. Exportar a 2980×4160 conserva textos e iconos nítidos, pero amplía el fondo; no recupera detalle de los originales de 5000 px.
+- La vista previa usa fondos ligeros de 745×1040. Las descargas individuales y los lotes usan fondos de 2980×4160 en WebP sin pérdida y el resto de recursos PNG originales. Ultra ya no amplía fondos de 2080 px. Los fondos de 5000 px se remuestrean una sola vez al tamaño final; no se publica resolución sobrante.
 - Se mantiene la mayor parte del motor tipográfico original. Se revisó y probó su funcionamiento; la fidelidad de cada carta histórica y las fuentes no tiene una certificación visual exhaustiva.
 
 La aplicación incluye recursos de terceros recuperados del proyecto original; no se concede una licencia nueva sobre esas imágenes o fuentes.

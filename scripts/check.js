@@ -13,7 +13,7 @@ console.log('Sintaxis y entradas HTML correctas.');
 const vm = require('node:vm');
 const assets = {};
 vm.runInNewContext(fs.readFileSync('assets.js', 'utf8'), assets);
-for (const file of Object.values(assets.CARD_ASSETS)) {
+for (const file of [...Object.values(assets.CARD_ASSETS), ...Object.values(assets.CARD_EXPORT_ASSETS || {})]) {
     let folder = '.';
     for (const component of file.split('/')) {
         if (!fs.readdirSync(folder).includes(component)) throw new Error('Recurso ausente o mayúsculas incorrectas: ' + file);

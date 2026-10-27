@@ -93,18 +93,18 @@ async function renderPreview() {
     finally { canvas.width = canvas.height = 0; previewRunning = false; if (previewPending) schedulePreview(); }
 }
 function renderCard() { schedulePreview(); }
-async function snapshotCanvas(multiplier) {
+async function snapshotCanvas(multiplier, fullResolution = false) {
     updateCardData();
     const snapshot = CardCore.normalizeCard(cardData, defaultConfig);
     const canvas = document.createElement('canvas');
-    try { await renderCardSnapshot(snapshot, canvas, { multiplier }); return { snapshot, canvas }; }
+    try { await renderCardSnapshot(snapshot, canvas, { multiplier, fullResolution }); return { snapshot, canvas }; }
     catch (error) { canvas.width = canvas.height = 0; throw error; }
 }
 async function downloadCard() {
     let canvas;
     try {
         status('Preparando PNG…');
-        const rendered = await snapshotCanvas(Number(document.getElementById('exportResolution').value));
+        const rendered = await snapshotCanvas(Number(document.getElementById('exportResolution').value), true);
         canvas = rendered.canvas;
         CardImages.download(await CardImages.canvasBlob(canvas), CardCore.fileName(rendered.snapshot, 'png'));
         status('PNG generado.');
@@ -127,17 +127,26 @@ async function importJSON(input) {
 }
 async function rasterFile(file, background = false) {
     if (!file || !['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) throw new Error('Usa una imagen PNG, JPG o WebP.');
+    const compress = document.getElementById('compress_uploads')?.checked;
     if (file.size > 20 * 1024 * 1024) throw new Error('La imagen supera 20 MB.');
+    if (!compress && file.size > 10 * 1024 * 1024) throw new Error('Sin comprimir, usa una imagen de hasta 10 MB o activa Comprimir nuevas imágenes.');
     const image = await createImageBitmap(file);
     if (image.width * image.height > 50_000_000) { image.close(); throw new Error('Imagen demasiado grande (máximo 50 megapíxeles).'); }
-    const canvas = document.createElement('canvas');
-    const scale = Math.min(1, (background ? 2080 : 1600) / Math.max(image.width, image.height));
-    canvas.width = Math.round(image.width * scale); canvas.height = Math.round(image.height * scale);
-    canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+    if (compress) {
+        const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
+        canvas.getContext('2d').drawImage(image, 0, 0); image.close();
+        const data = canvas.toDataURL('image/webp', 0.95);
+        canvas.width = canvas.height = 0;
+        return CardCore.safeImage(data);
+    }
     image.close();
-    const data = canvas.toDataURL('image/webp', 0.88);
-    canvas.width = canvas.height = 0;
-    return data;
+    // Preserve the supplied pixels and encoding; export must not upscale an auto-reduced upload.
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('No se pudo leer la imagen.'));
+        reader.onload = () => { try { resolve(CardCore.safeImage(reader.result)); } catch (error) { reject(error); } };
+        reader.readAsDataURL(file);
+    });
 }
 async function loadRasterInput(input, kind) {
     const ticket = ++editorGeneration;
@@ -155,11 +164,11 @@ function clearBackground() { cardData.backgroundData = null; updateCardData(); }
 async function duplicateBackground() {
     const ticket = editorGeneration;
     try {
-        const image = await CardImages.load(CardCore.backgroundPath(cardData.tcgType, cardData.stageVal), { required: true });
+        const image = await CardImages.load(CardCore.backgroundPath(cardData.tcgType, cardData.stageVal), { required: true, fullResolution: true });
         if (ticket !== editorGeneration) return;
         const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
         canvas.getContext('2d').drawImage(image, 0, 0);
-        cardData.backgroundData = canvas.toDataURL('image/webp', 0.88);
+        cardData.backgroundData = document.getElementById('compress_uploads')?.checked ? canvas.toDataURL('image/webp', 0.95) : canvas.toDataURL('image/png');
         canvas.width = canvas.height = 0;
         updateCardData(); status('Fondo duplicado en esta carta. Puedes reemplazarlo con Cargar fondo.');
     } catch (error) { status(error.message, true); }

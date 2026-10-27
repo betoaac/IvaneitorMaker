@@ -5,16 +5,17 @@ async function renderCardSnapshot(input, canvas, options = {}) {
     '[P]': '5', '[F]': '6', '[C]': '7', '[D]': '8', '[M]': '9'
 };
     const cardData = structuredClone(input);
+    const fullResolution = options.fullResolution || options.multiplier > 1;
     const customIconsConfig = structuredClone(cardData.config.symbols || { enabled: false, icons: {} });
     const customImages = {};
-    const evoImageGlobal = await CardImages.evolution(cardData, cardData.stageVal !== 'Basico');
+    const evoImageGlobal = await CardImages.evolution(cardData, cardData.stageVal !== 'Basico', fullResolution);
     const evoCacheKey = 0;
     const staticCacheCanvas = document.createElement('canvas');
     const staticCacheCtx = staticCacheCanvas.getContext('2d');
     let lastCacheKey = ''; let sharedTempCanvas = null; const userUploadedArt = null;
     await CardImages.fonts();
     if (customIconsConfig.enabled) for (const def of Object.values(customIconsConfig.icons)) {
-        if (def.enabled) customImages[`customicons/${def.file}`] = await CardImages.load(`customicons/${def.file}`, { required: true });
+        if (def.enabled) customImages[`customicons/${def.file}`] = await CardImages.load(`customicons/${def.file}`, { required: true, fullResolution });
     }
     try { await drawCard(); return canvas; }
     finally { staticCacheCanvas.width = staticCacheCanvas.height = 0; if (sharedTempCanvas) sharedTempCanvas.width = sharedTempCanvas.height = 0; }
@@ -61,7 +62,7 @@ async function drawCard() {
 
     // --- HELPER: CARGA DE IMÁGENES CON CACHÉ (OPTIMIZACIÓN CLAVE) ---
     // Si la imagen ya se pidió antes, la devuelve al instante sin parpadeos.
-    const loadImgCached = (src) => CardImages.load(src, { required: true });
+    const loadImgCached = (src) => CardImages.load(src, { required: true, fullResolution });
 
     // Clave para saber si debemos redibujar el fondo estático
     const currentCacheKey = `${type}_${stage}_${cardData.pokemonImgUrl}_${multiplier}_${artParams}_${hasCustomArt}_${c.artFlip}_${evoParams}`;
@@ -81,7 +82,7 @@ async function drawCard() {
         if (thisRenderId !== renderRequestCounter) return;
 
         // 2. CARGAR ARTE PRINCIPAL
-        const imgToDraw = await CardImages.load(cardData.customArtData || cardData.pokemonImgUrl, { required: true });
+        const imgToDraw = await CardImages.load(cardData.customArtData || cardData.pokemonImgUrl, { required: true, fullResolution });
         // --- CHECKPOINT 2 ---
         if (thisRenderId !== renderRequestCounter) return;
 

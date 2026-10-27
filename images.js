@@ -2,11 +2,20 @@
     'use strict';
     // Cache promises as well as successful loads; cap decoded image memory.
     const cache = new Map();
-    function assetUrl(src) { return root.CARD_ASSETS?.[src] || src; }
-    function load(src, { required = false } = {}) {
+    const decodedSizes = new Map();
+    function evict(url) { cache.delete(url); decodedSizes.delete(url); }
+    function trim() {
+        let bytes = [...decodedSizes.values()].reduce((total, size) => total + size, 0);
+        for (const [url, size] of decodedSizes) {
+            if (bytes <= 96 * 1024 * 1024) break;
+            bytes -= size; evict(url);
+        }
+    }
+    function assetUrl(src, fullResolution = false) { return (fullResolution && root.CARD_EXPORT_ASSETS?.[src]) || root.CARD_ASSETS?.[src] || src; }
+    function load(src, { required = false, fullResolution = false } = {}) {
         if (!src) return required ? Promise.reject(new Error('Falta una imagen obligatoria.')) : Promise.resolve(null);
         src = CardCore.safeImage(src);
-        const url = assetUrl(src);
+        const url = assetUrl(src, fullResolution);
         if (!cache.has(url)) {
             const promise = new Promise((resolve, reject) => {
                 const image = new Image();
@@ -14,7 +23,8 @@
                 function finish(error) {
                     clearTimeout(timer);
                     image.onload = image.onerror = null;
-                    if (error) { cache.delete(url); reject(error); } else resolve(image);
+                    if (error) { evict(url); reject(error); }
+                    else { decodedSizes.set(url, image.naturalWidth * image.naturalHeight * 4); trim(); resolve(image); }
                 }
                 image.crossOrigin = 'anonymous';
                 image.onload = () => finish();
@@ -22,18 +32,18 @@
                 image.src = url;
             });
             cache.set(url, promise);
-            while (cache.size > 20) cache.delete(cache.keys().next().value);
+            while (cache.size > 20) evict(cache.keys().next().value);
         }
         return cache.get(url).catch(error => { if (required) throw error; return null; });
     }
-    async function evolution(card, required = false) {
-        if (card.evoArtData) return load(card.evoArtData, { required });
+    async function evolution(card, required = false, fullResolution = false) {
+        if (card.evoArtData) return load(card.evoArtData, { required, fullResolution });
         if (!card.evoId) return null;
         const id = String(card.evoId);
         for (const src of [`pokemons/pm${id.padStart(4, '0')}_00_00_00_big.png`, `pokemons_other/${id.padStart(3, '0')}.png`, `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`]) {
             // The asset manifest avoids speculative 404s on static hosting.
             if (root.CARD_ASSETS && !src.startsWith('https:') && !root.CARD_ASSETS[src]) continue;
-            const image = await load(src);
+            const image = await load(src, { fullResolution });
             if (image) return image;
         }
         if (required) throw new Error('No se encontró la imagen de pre-evolución.');
