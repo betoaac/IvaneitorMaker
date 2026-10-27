@@ -25,7 +25,7 @@ En Windows, la configuración de pruebas utiliza Chrome instalado; CI utiliza Ch
 
 ## Uso
 
-- Sin Google, Guardar conserva la carta en la biblioteca IndexedDB de este navegador. El borrador se guarda tras 500 ms sin cambios; Guardar también confirma el borrador antes de terminar.
+- Sin Google, Guardar descarga un ZIP con un PNG Ultra (2980×4160, sin pérdida) y el JSON editable de la misma carta, y conserva una copia en la biblioteca IndexedDB de este navegador. El ZIP se descarga incluso si falla la copia local por cuota. El borrador se guarda tras 500 ms sin cambios; Guardar también confirma el borrador antes de terminar.
 - Con Google conectado, Guardar conserva cada carta en el Drive de esa cuenta. No hay usuarios simulados ni selector de nombres compartidos. No se envían cartas automáticamente al conectar.
 - La galería permite abrir/borrar cartas, filtrar colecciones, importar varios JSON del escritorio, respaldar JSON en ZIP, exportar CSV y generar PNG.
 - El lote respeta la resolución elegida. Produce ZIP separados cada cinco imágenes o 32 MB de PNG, con nombres únicos. Descarga las partes de los enlaces; la última contiene `informe.json`. Una carta dañada se informa y las demás continúan. Cancelar termina después de la carta actual.

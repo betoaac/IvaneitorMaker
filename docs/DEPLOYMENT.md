@@ -17,6 +17,8 @@ Todas las rutas son relativas para funcionar bajo `https://usuario.github.io/rep
 
 Referencia: [workflows oficiales de Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
 
+El modo de descarga sin Google puede publicarse con `config.js` vacío y sin la variable `GOOGLE_CLIENT_ID`. Guardar entrega un ZIP con PNG Ultra y JSON editable; configurar Google no es un requisito para ese modo.
+
 ## Configuración Google
 
 1. En Google Cloud crea/elige un proyecto y habilita **Google Drive API**.

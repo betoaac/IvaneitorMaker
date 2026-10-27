@@ -1,0 +1,25 @@
+const { test, expect } = require('@playwright/test');
+const fs = require('node:fs');
+const { unzipSync, strFromU8 } = require('fflate');
+test('Save without Google downloads Ultra PNG and reloadable JSON together', async ({ page }) => {
+    await page.route('https://accounts.google.com/**', route => route.fulfill({ body: '', contentType: 'text/javascript' }));
+    await page.goto('/');
+    await expect.poll(() => page.locator('#cardCanvas').evaluate(c => c.width)).toBe(745);
+    await page.locator('#pokeNamePrefix').fill('Mi carta');
+    await page.locator('#exportResolution').selectOption('1');
+    const downloading = page.waitForEvent('download');
+    await page.getByRole('button', { name: /GUARDAR/ }).click();
+    const download = await downloading;
+    expect(download.suggestedFilename()).toMatch(/\.zip$/);
+    const entries = unzipSync(fs.readFileSync(await download.path()));
+    const names = Object.keys(entries);
+    expect(names).toHaveLength(2);
+    const png = Buffer.from(entries[names.find(name => name.endsWith('.png'))]);
+    expect(png.readUInt32BE(16)).toBe(2980); expect(png.readUInt32BE(20)).toBe(4160);
+    const json = entries[names.find(name => name.endsWith('.json'))];
+    expect(JSON.parse(strFromU8(json)).namePrefix).toBe('Mi carta');
+    await expect(page.locator('.saved-card-item')).toHaveCount(1);
+    await page.getByRole('button', { name: 'Ir al editor ➔' }).click();
+    await page.locator('input[accept=".json"]').first().setInputFiles({ name: 'saved.json', mimeType: 'application/json', buffer: Buffer.from(json) });
+    await expect(page.locator('#pokeNamePrefix')).toHaveValue('Mi carta');
+});

@@ -19,7 +19,8 @@ async function saveSystemCard() {
     let canvas;
     try {
         const store = repository();
-        const { snapshot, canvas: rendered } = await snapshotCanvas(1); canvas = rendered;
+        const localSave = !CloudAuth.usingDrive();
+        const { snapshot, canvas: rendered } = await snapshotCanvas(localSave ? 4 : 1, localSave); canvas = rendered;
         // Gallery snapshot and JSON come from the same completed render.
         const thumb = document.createElement('canvas'); thumb.width = 220; thumb.height = 307;
         thumb.getContext('2d').drawImage(canvas, 0, 0, thumb.width, thumb.height);
@@ -35,6 +36,25 @@ async function saveSystemCard() {
             if (cards.some(x => x.id !== existing?.id && x.data.config?.setTextVal?.trim().toLowerCase() === set && x.data.config?.setNumCurr === num) && !confirm('Ya existe otra carta con ese set y número. ¿Guardar de todas formas?')) return;
         }
         const record = { id: existing?.id || crypto.randomUUID(), remote: existing?.remote || false, timestamp: Date.now(), data: snapshot, thumbnail };
+        if (localSave) {
+            const png = new Uint8Array(await (await CardImages.canvasBlob(canvas)).arrayBuffer());
+            const files = {
+                [CardCore.fileName(snapshot, 'png')]: png,
+                [CardCore.fileName(snapshot, 'json')]: fflate.strToU8(JSON.stringify(snapshot, null, 2))
+            };
+            const archive = new Blob([fflate.zipSync(files, { level: 0 })], { type: 'application/zip' });
+            let localError = '';
+            try {
+                const saved = await store.save(record, existing?.revision);
+                loadedRecord = saved; currentLoadedFilePath = saved.id;
+                clearTimeout(draftTimer); await LocalCards.saveDraft(snapshot);
+            } catch (error) { localError = error.message; }
+            // One download keeps PNG and editable JSON together and avoids multi-download blocking.
+            CardImages.download(archive, CardCore.fileName(snapshot, 'zip'));
+            if (!localError) await toggleDashboard(true);
+            status(localError ? 'PNG Ultra y JSON preparados en ZIP. No se pudo guardar la copia en el navegador: ' + localError : 'PNG Ultra y JSON preparados en ZIP. También se guardó una copia en este navegador.', !!localError);
+            return;
+        }
         const saved = await store.save(record, existing?.revision);
         loadedRecord = saved; currentLoadedFilePath = saved.id;
         if (!CloudAuth.usingDrive()) { clearTimeout(draftTimer); await LocalCards.saveDraft(snapshot); }
