@@ -1,0 +1,37 @@
+[hidden] { display: none !important; }
+.account-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12px; }
+.account-bar span { width: 100%; overflow-wrap: anywhere; }
+.account-bar a { color: #82caff; }
+button, summary, .file-button { cursor: pointer; }
+button { color: #eee; background: #30363d; border: 1px solid #59636e; border-radius: 5px; padding: 7px 10px; }
+button:focus-visible, [role=button]:focus-visible, summary:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, a:focus-visible { outline: 2px solid #82caff; outline-offset: 3px; }
+#app-status { font-size: 12px; line-height: 1.4; margin: 8px 0; color: #c9d1d9; }
+#app-status[data-error=true] { color: #ffb4ab; }
+.background-tools { border: 1px solid #59636e; border-radius: 5px; padding: 8px; font-size: 12px; }
+.background-tools p { line-height: 1.5; color: #c9d1d9; }
+.file-button { display: inline-block; border: 1px solid #59636e; border-radius: 5px; padding: 7px; color: white; }
+.file-button input { display: block; margin-top: 5px; max-width: 260px; }
+.gallery-toolbar { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; }
+.gallery-toolbar select { width: auto; min-width: 140px; }
+.saved-card-item { max-width: 240px; }
+.saved-card-item .card-info button { margin: 6px 6px 0 0; }
+.energy-btn { position: relative; margin-bottom: 16px; }
+.energy-remove { position: absolute; bottom: -19px; right: 0; font-size: 11px; padding: 0 4px; line-height: 16px; }
+.batch-panel { position: fixed; z-index: 10010; bottom: 12px; right: 12px; width: min(520px, calc(100vw - 24px)); max-height: 55vh; overflow: auto; background: #161b22; color: white; border: 1px solid #82caff; padding: 16px; border-radius: 8px; box-shadow: 0 5px 30px #0009; }
+.batch-panel progress { display: block; width: 100%; margin-bottom: 10px; }
+#batch-downloads { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+#batch-downloads a { color: #82caff; }
+.controls { flex-shrink: 0; }
+@media (max-width: 760px) {
+    body { height: auto; overflow: auto; }
+    .app-container { height: auto; min-height: 100vh; width: 100%; flex-direction: column; }
+    .controls { width: 100%; max-width: 100%; min-width: 0; height: auto; overflow: visible; resize: none; padding: 8px; }
+    .sticky-section { position: relative; }
+    .preview-panel { min-height: 50vh; padding: 12px; order: -1; }
+    #cardCanvas { max-width: 100%; max-height: 50vh !important; }
+    .dashboard-container { width: 100%; height: 100%; max-height: 100%; border-radius: 0; }
+    .dashboard-header { flex-direction: column; gap: 8px; }
+    .filter-bar { flex-wrap: wrap; }
+    .dashboard-footer { flex-wrap: wrap; }
+    .row { flex-wrap: wrap; }
+}

@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com; img-src 'self' data: blob: https://raw.githubusercontent.com/PokeAPI/sprites/; font-src 'self'; connect-src 'self' https://pokeapi.co https://www.googleapis.com https://accounts.google.com https://oauth2.googleapis.com; frame-src https://accounts.google.com; object-src 'none'; base-uri 'self'; form-action 'self'">
+    <meta name="referrer" content="no-referrer">
+    <title>CaptainHec Cardmaker</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* === LAYOUT PRINCIPAL === */
+        body { margin: 0; padding: 0; background: #111; color: white; height: 100vh; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
+
+        .app-container { display: flex; height: 100vh; }
+
+        /* BARRA LATERAL (CON SCROLL INTERNO) */
+        .controls {
+            width: 380px;
+            background: #1a1a1a;
+            border-right: 1px solid #444;
+            overflow-y: auto; /* IMPORTANTE PARA STICKY */
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .section { padding: 15px; border-bottom: 1px solid #333; }
+        .row { display: flex; gap: 10px; margin-bottom: 10px; }
+        .input-group { margin-bottom: 10px; }
+        label { display: block; margin-bottom: 3px; font-size: 12px; color: #aaa; }
+        input, select, textarea { width: 100%; box-sizing: border-box; background: #222; border: 1px solid #444; color: white; padding: 5px; border-radius: 4px; }
+        input:focus, textarea:focus { border-color: #4db8ff; outline: none; }
+
+        /* === HEADER FIJO (GESTIÓN DE CARTAS) === */
+        .sticky-section {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: #001a29;
+            border-bottom: 2px solid #4db8ff;
+            padding: 10px 15px; /* Menos padding para que sea compacto */
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+
+        /* === PANTALLA PRINCIPAL (CANVAS) === */
+        .preview-panel {
+            flex: 1;
+            background: #0d0d0d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow: auto;
+        }
+
+        /* ESTILOS DE LA BARRA LATERAL (ELEMENTOS) */
+        .type-selector-group {
+            display: flex; flex-wrap: wrap; gap: 5px; background: #222; padding: 8px; border-radius: 5px; margin-bottom: 5px;
+        }
+        .type-btn {
+            width: 30px; height: 30px; border-radius: 50%; border: 2px solid transparent; background: #333;
+            cursor: pointer; padding: 0; opacity: 0.4; transition: all 0.2s; display: flex; align-items: center; justify-content: center;
+        }
+        .type-btn img { width: 100%; height: 100%; object-fit: contain; }
+        .type-btn:hover { opacity: 0.8; transform: scale(1.1); }
+        .type-btn.active { opacity: 1; border-color: #4db8ff; box-shadow: 0 0 8px #4db8ff; background: #000; }
+
+        /* BOTONES DE ETAPA */
+        .btn-group-stage { display: flex; border: 1px solid #444; border-radius: 4px; overflow: hidden; }
+        .btn-group-stage button { flex: 1; background: #333; color: #aaa; border: none; padding: 5px; cursor: pointer; font-size: 11px; }
+        .btn-group-stage button.active { background: #4db8ff; color: #000; font-weight: bold; }
+
+        /* SLIDERS Y CONTROLES */
+        .slider-row { display: flex; align-items: center; gap: 10px; }
+        .slider-header {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;
+        }
+        .slider-actions { display: flex; align-items: center; gap: 4px; }
+        .slider-num-input {
+            width: 50px; background: #222; border: 1px solid #444; color: #4db8ff;
+            text-align: right; padding: 2px 5px; font-size: 11px; border-radius: 3px; font-weight: bold;
+        }
+        .slider-num-input:focus { border-color: #4db8ff; background: #000; outline: none;}
+        .btn-reset-slider {
+            background: #333; color: #aaa; border: 1px solid #444; border-radius: 3px;
+            width: 20px; height: 20px; font-size: 10px; cursor: pointer; display: flex;
+            align-items: center; justify-content: center; transition: all 0.2s;
+        }
+        .btn-reset-slider:hover { background: #cc0000; color: white; border-color: #ff0000; }
+
+        /* DETALLES Y SUMMARY */
+        summary { cursor: pointer; color: #4db8ff; font-weight: bold; font-size: 12px; margin-top: 5px; outline: none; }
+        .details-content { margin-top: 10px; padding-left: 10px; border-left: 2px solid #333; }
+
+        /* === ESTILOS DEL DASHBOARD / GALERÍA === */
+        .dashboard-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.95); z-index: 9999;
+            display: flex; justify-content: center; align-items: center;
+            backdrop-filter: blur(5px);
+            display: none; /* Oculto por defecto */
+        }
+        .dashboard-container {
+            width: 90%; max-width: 1100px; height: 85vh;
+            background: #1a1a1a; border: 2px solid #4db8ff; border-radius: 15px;
+            display: flex; flex-direction: column; box-shadow: 0 0 50px rgba(77, 184, 255, 0.2);
+        }
+        .dashboard-header {
+            padding: 20px; border-bottom: 1px solid #333; background: #111; border-radius: 15px 15px 0 0;
+            display: flex; justify-content: space-between; align-items: center; color: white;
+        }
+        .dashboard-content { flex: 1; overflow-y: auto; padding: 20px; background: #222; }
+        .cards-grid {
+            display: flex; flex-direction: column; gap: 10px; width: 100%; padding-bottom: 50px;
+        }
+
+        .dashboard-footer { padding: 15px; border-top: 1px solid #333; background: #111; border-radius: 0 0 15px 15px; display: flex; justify-content: flex-end; gap: 10px; }
+        .btn-dash-action { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+
+        /* ELEMENTOS GALERIA */
+        .gallery-section-title { width: 100%; font-size: 18px; color: #4db8ff; border-bottom: 1px solid #444; padding-bottom: 5px; margin-bottom: 15px; margin-top: 20px; font-weight: bold; }
+        .sets-grid-container { display: flex; flex-wrap: wrap; gap: 15px; width: 100%; }
+        .set-folder-item { width: 100px; text-align: center; cursor: pointer; transition: transform 0.2s; padding: 10px; background: #252525; border-radius: 8px; border: 1px solid #333; }
+        .set-folder-item:hover { transform: translateY(-3px); border-color: #4db8ff; background: #303030; }
+        .set-folder-icon { width: 50px; height: 50px; object-fit: contain; margin-bottom: 5px; }
+        .set-folder-name { font-size: 12px; font-weight: bold; color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .set-folder-count { font-size: 10px; color: #888; }
+        .btn-back-gallery { padding: 8px 15px; background: #555; color: white; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 15px; display: flex; align-items: center; gap: 5px; font-weight: bold; width: fit-content; }
+
+        /* TARJETA EN GALERÍA */
+        .saved-card-item {
+            background: #111; border: 1px solid #444; border-radius: 8px; overflow: hidden; width: 180px;
+            transition: transform 0.2s, border-color 0.2s; cursor: pointer; position: relative;
+        }
+        .saved-card-item:hover { transform: translateY(-5px); border-color: #4db8ff; }
+        .card-thumb { width: 100%; height: 250px; object-fit: contain; background: #000; }
+        .btn-delete-card {
+            position: absolute; top: 5px; right: 5px; background: red; color: white;
+            border: none; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; display: none; font-weight: bold;
+        }
+        .saved-card-item:hover .btn-delete-card { display: block; }
+
+        /* MINI SELECTORES */
+        .mini-buttons { display: flex; gap: 2px; }
+        .mini-buttons button { flex: 1; background: #333; color: white; border: 1px solid #444; padding: 4px; font-size: 10px; cursor: pointer; }
+        .mini-buttons button:hover { background: #555; }
+        .type-display-box { width: 30px; height: 30px; border: 1px solid #444; background: #000; display: flex; align-items: center; justify-content: center; margin: 0 auto; border-radius: 50%; }
+        .type-display-box img { width: 100%; height: 100%; object-fit: contain; }
+
+        .btn-generate {
+            color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;
+            font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;
+            /* AQUÍ ESTÁ EL CAMBIO DE ALTURA: padding pequeño */
+            padding: 5px 10px;
+            transition: filter 0.2s;
+        }
+        .btn-generate:hover { filter: brightness(1.2); }
+
+    </style>
+    <link rel="stylesheet" href="web.css">
+</head>
+<body>
+    <div class="app-container">
+        <aside class="controls">
+
+            <div class="sticky-section">
+                <h3 style="color:#4db8ff; margin: 0 0 10px 0; font-size: 16px; display: flex; align-items: center; gap: 5px;">
+                    📂 Gestión de Cartas
+                </h3>
+                <div class="account-bar">
+                    <span id="account-label">Biblioteca de este navegador</span>
+                    <button type="button" id="google-connect" onclick="CloudAuth.connect()">Conectar con Google</button>
+                    <button type="button" id="google-disconnect" onclick="CloudAuth.disconnect()" hidden>Desconectar</button>
+                    <a href="privacy.html" target="_blank" rel="noopener">Privacidad</a>
+                </div>
+                <p id="app-status" role="status" aria-live="polite">Iniciando…</p>
+                <div class="row" style="gap:10px; margin-bottom: 0;">
+                    <button type="button" class="btn-generate" onclick="saveSystemCard()" style="background:#007bff; flex:1;">
+                        💾 GUARDAR
+                    </button>
+                    <button type="button" class="btn-generate" onclick="toggleDashboard(true)" style="background:#666; flex:1;">
+                        🗂️ GALERÍA
+                    </button>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>1. Datos del Pokémon</h3>
+                <div class="row" style="align-items: center; gap: 5px;">
+                    <div style="flex: 2;">
+                        <label>Prefijo</label>
+                        <input type="text" id="pokeNamePrefix" placeholder="Ash's" oninput="updateCardData()">
+                    </div>
+                    <div style="flex: 6;">
+                        <label>Nombre</label>
+                        <input type="text" id="pokeName" placeholder="Pikachu" oninput="fetchPokeData()">
+                    </div>
+                    <div style="flex: 2;">
+                        <label>Sufijo</label>
+                        <input type="text" id="pokeNameSuffix" placeholder="ex" oninput="updateCardData()">
+                    </div>
+
+                    <div style="flex: 1; text-align: center;">
+                        <label>T1</label>
+                        <input type="hidden" id="pokeType1">
+                        <div id="icon_t1" class="type-display-box" title="Tipo 1"><span style="color:#444; font-size:10px;">-</span></div>
+                    </div>
+
+                    <div style="flex: 1; text-align: center;">
+                        <label>T2</label>
+                        <input type="hidden" id="pokeType2">
+                        <div id="icon_t2" class="type-display-box" title="Tipo 2"><span style="color:#444; font-size:10px;">-</span></div>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>Pokédex</label>
+                    <input type="text" id="pokeStats" placeholder="NO. 0025 Ratón Altura: 0.4m..." oninput="updateCardData()">
+                </div>
+                <div class="input-group">
+                    <label>Descripción</label>
+                    <textarea id="pokeFlavor" rows="3" placeholder="Descripción de la Pokédex..." oninput="updateCardData()"></textarea>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>2. Estadísticas</h3>
+                <div class="row" style="align-items: flex-end; gap: 5px;">
+                    <div style="flex: 1;"> <label>Etiqueta</label>
+                        <input type="text" id="hp_label_text" value="PS" placeholder="PS" oninput="updateCardData()">
+                    </div>
+                    <div style="flex: 1;"> <label>Puntos de Salud</label>
+                        <input type="number" id="hp_val" value="60" oninput="updateCardData()">
+                    </div>
+                    <div style="flex: 2;"> <label>Etapa</label>
+                        <input type="hidden" id="stage_val" value="Basico">
+                        <div class="btn-group-stage">
+                            <button type="button" class="active" onclick="setStageVal('Basico', this)">Básico</button>
+                            <button type="button" onclick="setStageVal('Fase1', this)">Fase 1</button>
+                            <button type="button" onclick="setStageVal('Fase2', this)">Fase 2</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="input-group" style="margin-top: 10px;">
+                    <label>Tipo de la Carta</label>
+                    <div id="tcg_type_selector" class="type-selector-group"></div>
+                    <details class="background-tools"><summary>Fondo personalizado de esta carta</summary>
+                        <p>Se incluye al guardar o exportar el JSON. Cookie usa Normal hasta que cargues tu fondo; Hada ya tiene el suyo. El fondo se mantiene al cambiar tipo o etapa hasta pulsar Original.</p>
+                        <label class="file-button">Cargar fondo PNG / JPG / WebP<input id="background-file" type="file" accept="image/png,image/jpeg,image/webp" onchange="loadRasterInput(this, 'backgroundData')"></label>
+                        <button type="button" onclick="duplicateBackground()">Duplicar fondo base</button>
+                        <button type="button" onclick="clearBackground()">Usar original</button>
+                    </details>
+                </div>
+
+                <div class="row" style="margin-top: 5px;">
+                    <label class="checkbox-container">
+                        <input type="checkbox" id="light_text_mode" onchange="updateCardData()"> Texto Claro
+                    </label>
+                    <label class="checkbox-container" id="ability_boost_container" style="opacity:0.5; pointer-events:none;">
+                        <input type="checkbox" id="ability_stroke_boost" onchange="updateCardData()"> Reforzar Habilidad
+                    </label>
+                </div>
+
+                <div id="evo_controls_panel" style="display:none; margin-top: 15px; border-top: 1px dashed #444; padding-top: 10px;">
+                    <label style="color:#ffcc00; font-weight:bold; margin-bottom:8px;">Datos de Pre-Evolución</label>
+
+                    <div class="input-group">
+                         <label>Nombre evolución anterior</label>
+                         <input type="text" id="evo_name" oninput="updateCardData()">
+                    </div>
+                    <div class="input-group">
+                         <label>Etiqueta</label>
+                         <input type="text" id="evo_label" value="Evoluciona de" oninput="updateCardData()">
+                    </div>
+
+                    <div class="input-group" style="margin-top:5px;">
+                        <label>Imagen Pre-Evo (Cargar o Pegar)</label>
+                        <div style="display:flex; gap:5px;">
+                            <input type="file" id="evoInput" accept="image/*" onchange="loadLocalEvo(this)" style="font-size:10px; width:100%;">
+                            <button type="button" onclick="clearEvoData()" style="background:#cc0000; color:white; border:none; border-radius:3px; cursor:pointer; padding:0 8px; font-weight:bold;">X</button>
+                        </div>
+                    </div>
+
+                    <details class="advanced-options">
+                        <summary>Transformar Pre-Evolución <span>▼</span></summary>
+                        <div class="details-content">
+                            <div class="row">
+                                <label class="checkbox-container">
+                                    <input type="checkbox" id="evo_flip" onchange="updateCardData()"> Espejar
+                                </label>
+                            </div>
+
+                            <div class="slider-control">
+                                <div class="slider-header">
+                                    <label>Zoom</label>
+                                    <div class="slider-actions">
+                                        <input type="number" id="num_evo_zoom" class="slider-num-input" value="2" step="0.1" oninput="syncFromNum('evo_zoom')">
+                                        <button type="button" class="btn-reset-slider" onclick="resetSlider('evo_zoom')">R</button>
+                                    </div>
+                                </div>
+                                <input type="range" id="evo_zoom" min="0.5" max="5" step="0.25" value="2" data-default="2" oninput="syncFromRange('evo_zoom')">
+                            </div>
+
+                            <div class="slider-control">
+                                <div class="slider-header">
+                                    <label>X</label>
+                                    <div class="slider-actions">
+                                        <input type="number" id="num_evo_x" class="slider-num-input" value="70" step="1" oninput="syncFromNum('evo_x')">
+                                        <button type="button" class="btn-reset-slider" onclick="resetSlider('evo_x')">R</button>
+                                    </div>
+                                </div>
+                                <input type="range" id="evo_x" min="0" max="200" step="1" value="70" data-default="70" oninput="syncFromRange('evo_x')">
+                            </div>
+
+                            <div class="slider-control">
+                                <div class="slider-header">
+                                    <label>Y</label>
+                                    <div class="slider-actions">
+                                        <input type="number" id="num_evo_y" class="slider-num-input" value="82" step="1" oninput="syncFromNum('evo_y')">
+                                        <button type="button" class="btn-reset-slider" onclick="resetSlider('evo_y')">R</button>
+                                    </div>
+                                </div>
+                                <input type="range" id="evo_y" min="0" max="200" step="1" value="82" data-default="82" oninput="syncFromRange('evo_y')">
+                            </div>
+
+                            <div class="slider-control">
+                                <div class="slider-header">
+                                    <label>Rotación</label>
+                                    <div class="slider-actions">
+                                        <input type="number" id="num_evo_rot" class="slider-num-input" value="0" step="1" oninput="syncFromNum('evo_rot')">
+                                        <button type="button" class="btn-reset-slider" onclick="resetSlider('evo_rot')">R</button>
+                                    </div>
+                                </div>
+                                <input type="range" id="evo_rot" min="-180" max="180" step="1" value="0" data-default="0" oninput="syncFromRange('evo_rot')">
+                            </div>
+                        </div>
+                    </details>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>3. Imagen del Pokémon</h3>
+                <div class="input-group">
+                    <label>Cargar Imagen (Click o Ctrl+V)</label>
+                    <input type="file" id="artInput" accept="image/*" onchange="loadLocalArt(this)">
+                </div>
+
+                <details class="advanced-options">
+                    <summary>Transformar Imagen <span>▼</span></summary>
+                    <div class="details-content">
+                        <div class="row" style="margin-bottom:8px;">
+                             <label class="checkbox-container">
+                                <input type="checkbox" id="art_flip" onchange="updateCardData()"> Espejar (Mirror)
+                            </label>
+                        </div>
+
+                        <div class="slider-control">
+                            <div class="slider-header">
+                                <label>Zoom</label>
+                                <div class="slider-actions">
+                                    <input type="number" id="num_art_zoom" class="slider-num-input" value="1" step="0.1" oninput="syncFromNum('art_zoom')">
+                                    <button type="button" class="btn-reset-slider" onclick="resetSlider('art_zoom')">R</button>
+                                </div>
+                            </div>
+                            <input type="range" id="art_zoom" min="0.1" max="5" step="0.1" value="1" data-default="1" oninput="syncFromRange('art_zoom')">
+                        </div>
+
+                        <div class="slider-control">
+                            <div class="slider-header">
+                                <label>Mover X</label>
+                                <div class="slider-actions">
+                                    <input type="number" id="num_art_x" class="slider-num-input" value="373" step="1" oninput="syncFromNum('art_x')">
+                                    <button type="button" class="btn-reset-slider" onclick="resetSlider('art_x')">R</button>
+                                </div>
+                            </div>
+                            <input type="range" id="art_x" min="-500" max="1200" step="1" value="373" data-default="373" oninput="syncFromRange('art_x')">
+                        </div>
+
+                        <div class="slider-control">
+                            <div class="slider-header">
+                                <label>Mover Y</label>
+                                <div class="slider-actions">
+                                    <input type="number" id="num_art_y" class="slider-num-input" value="315" step="1" oninput="syncFromNum('art_y')">
+                                    <button type="button" class="btn-reset-slider" onclick="resetSlider('art_y')">R</button>
+                                </div>
+                            </div>
+                            <input type="range" id="art_y" min="-500" max="1200" step="1" value="315" data-default="315" oninput="syncFromRange('art_y')">
+                        </div>
+
+                        <div class="slider-control">
+                            <div class="slider-header">
+                                <label>Rotación</label>
+                                <div class="slider-actions">
+                                    <input type="number" id="num_art_rotation" class="slider-num-input" value="0" step="0.5" oninput="syncFromNum('art_rotation')">
+                                    <button type="button" class="btn-reset-slider" onclick="resetSlider('art_rotation')">R</button>
+                                </div>
+                            </div>
+                            <input type="range" id="art_rotation" min="-180" max="180" step="0.5" value="0" data-default="0" oninput="syncFromRange('art_rotation')">
+                        </div>
+                    </div>
+                </details>
+            </div>
+
+            <div class="section">
+                <h3>4. Habilidad y Ataques</h3>
+                <div class="body-config-panel" style="margin-bottom: 15px; background: #2a2a2a; padding: 10px; border-radius: 5px;">
+                    <label style="color:#4db8ff; font-weight:bold;">Configuración de Cuerpo</label>
+
+                    <div class="slider-control">
+                        <div class="slider-header">
+                            <label>Posición Vertical</label>
+                            <div class="slider-actions">
+                                <input type="number" id="num_body_y_center" class="slider-num-input" value="749" step="1" oninput="syncFromNum('body_y_center')">
+                                <button type="button" class="btn-reset-slider" onclick="resetSlider('body_y_center')">R</button>
+                            </div>
+                        </div>
+                        <input type="range" id="body_y_center" min="600" max="900" step="1" value="749" data-default="749" oninput="syncFromRange('body_y_center')">
+                    </div>
+
+                    <div class="btn-group-presets" style="display:flex; gap:5px; margin: 10px 0;">
+                        <button onclick="applyBodyPreset('standard')" style="flex:1;">Estándar</button>
+                        <button onclick="applyBodyPreset('condensed')" style="flex:1;">Condensada</button>
+                    </div>
+
+                    <details class="advanced-options">
+                        <summary>Configuración de texto avanzada <span>▼</span></summary>
+                            <div class="details-content">
+
+                                <div class="slider-control">
+                                    <div class="slider-header">
+                                        <label>Tamaño Texto</label>
+                                        <div class="slider-actions">
+                                            <input type="number" id="num_body_size" class="slider-num-input" value="28" step="0.5" oninput="syncFromNum('body_size')">
+                                            <button type="button" class="btn-reset-slider" onclick="resetSlider('body_size')">R</button>
+                                        </div>
+                                    </div>
+                                    <input type="range" id="body_size" min="20" max="40" step="0.5" value="28" data-default="28" oninput="syncFromRange('body_size')">
+                                </div>
+
+                                <div class="slider-control">
+                                    <div class="slider-header">
+                                        <label>Interlineado</label>
+                                        <div class="slider-actions">
+                                            <input type="number" id="num_body_leading" class="slider-num-input" value="29" step="0.5" oninput="syncFromNum('body_leading')">
+                                            <button type="button" class="btn-reset-slider" onclick="resetSlider('body_leading')">R</button>
+                                        </div>
+                                    </div>
+                                    <input type="range" id="body_leading" min="20" max="50" step="0.5" value="29" data-default="29" oninput="syncFromRange('body_leading')">
+                                </div>
+
+                                <div class="slider-control">
+                                    <div class="slider-header">
+                                        <label>Kerning</label>
+                                        <div class="slider-actions">
+                                            <input type="number" id="num_body_kerning" class="slider-num-input" value="-0.5" step="0.1" oninput="syncFromNum('body_kerning')">
+                                            <button type="button" class="btn-reset-slider" onclick="resetSlider('body_kerning')">R</button>
+                                        </div>
+                                    </div>
+                                    <input type="range" id="body_kerning" min="-3" max="3" step="0.1" value="-0.5" data-default="-0.5" oninput="syncFromRange('body_kerning')">
+                                </div>
+
+                                 <div class="row">
+                                    <label class="checkbox-container">
+                                        <input type="checkbox" id="thin_spaces" onchange="updateCardData()"> Espacios Finos
+                                    </label>
+                                </div>
+
+                                 <div class="slider-control" style="display:none;">
+                                     <label>Escala <span id="val_scale_body">0.97</span></label>
+                                    <input type="range" id="scale_body" min="0.8" max="1.1" step="0.01" value="0.97" oninput="updateCardData()">
+                                </div>
+
+
+                                <div style="margin-top:15px; border-top:1px solid #444; padding-top:10px;">
+                                    <label style="color:#ffcc00; font-weight:bold; cursor:pointer;">
+                                        <input type="checkbox" id="chk_global_symbols" onchange="toggleSymbolConfig(this, 'global')">
+                                        Activar Reemplazo Simbólico
+                                    </label>
+
+                                    <div id="symbol_suboptions" style="margin-left:20px; display:none; flex-direction:column; gap:5px; margin-top:5px; font-size:12px; color:#ddd;">
+                                        <label><input type="checkbox" data-symbol="pokemon_activo" checked onchange="toggleSymbolConfig(this, 'pokemon_activo')"> Pokémon Activo</label>
+                                        <label><input type="checkbox" data-symbol="pokemon_banca" checked onchange="toggleSymbolConfig(this, 'pokemon_banca')"> Pokémon Banca</label>
+                                        <label><input type="checkbox" data-symbol="pila_descartes" checked onchange="toggleSymbolConfig(this, 'pila_descartes')"> Pila Descartes</label>
+                                        <label><input type="checkbox" data-symbol="baraja_baraja" checked onchange="toggleSymbolConfig(this, 'baraja_baraja')"> Baraja Baraja</label>
+                                        <label><input type="checkbox" data-symbol="habilidad" checked onchange="toggleSymbolConfig(this, 'habilidad')"> Habilidad (Texto rojo)</label>
+                                        <label><input type="checkbox" data-symbol="contadores_dano" checked onchange="toggleSymbolConfig(this, 'contadores_dano')"> Contadores Daño</label>
+                                        <label><input type="checkbox" data-symbol="cartas_energia" checked onchange="toggleSymbolConfig(this, 'cartas_energia')"> Cartas Energía</label>
+                                    </div>
+                                </div>
+
+
+
+
+                            </div>
+                    </details>
+                </div>
+
+                <div class="input-group">
+                    <label>Nombre Habilidad</label>
+                    <input type="text" id="ability_name" placeholder="Ej: Poder Oculto" oninput="updateCardData()" style="color:#ff6666;">
+                </div>
+                <div class="input-group">
+                    <textarea id="ability_desc" class="auto-expand" placeholder="Descripción de la habilidad..." oninput="autoResize(this); updateCardData()"></textarea>
+                </div>
+
+                <div id="attacks-container"></div>
+            </div>
+
+            <div class="section">
+                <h3>5. Debilidad, Resistencia y Retirada</h3>
+                <div class="row">
+                    <div style="flex:1;">
+                        <label>Debilidad</label>
+                        <div id="weak_selector" class="mini-selector"></div>
+                        <input type="text" id="weak_val" placeholder="+20" value="x2" style="width:40px; margin-top:5px; text-align:center;" oninput="updateCardData()">
+                    </div>
+                    <div style="flex:1;">
+                        <label>Resistencia</label>
+                        <div id="res_selector" class="mini-selector"></div>
+                        <input type="text" id="res_val" placeholder="−20" value="−30" style="width:40px; margin-top:5px; text-align:center;" oninput="updateCardData()">
+                    </div>
+                    <div style="flex:1;">
+                        <label>Retirada</label>
+                        <div id="retreat-selector" class="mini-buttons">
+                            <button onclick="setRetreat(0)">0</button>
+                            <button onclick="setRetreat(1)">1</button>
+                            <button onclick="setRetreat(2)">2</button>
+                            <button onclick="setRetreat(3)">3</button>
+                            <button onclick="setRetreat(4)">4</button>
+                            <button onclick="setRetreat(5)">5</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>6. Autoría y Set</h3>
+                <details class="advanced-options" open>
+                    <summary>Configurar Set y Autor <span>▼</span></summary>
+                    <div class="details-content">
+                         <div class="input-group">
+                            <label>Ilustrador</label>
+                            <input type="text" id="illustrator_name" placeholder="Ej: Ken Sugimori" oninput="updateCardData()">
+                        </div>
+                         <div class="input-group">
+                            <label>Copyright / Autor</label>
+                            <input type="text" id="author_text" value="©2026 Pokémon/Nintendo/Creatures/GAME FREAK" oninput="updateCardData()">
+                        </div>
+
+                        <div class="row" style="margin-top:10px; border-top:1px solid #444; padding-top:5px;">
+                            <div style="flex:1;">
+                                <label>Icono del Set</label>
+                                <select id="set_icon_img" onchange="updateCardData()" style="width:100%; background:#333; color:white; padding:5px; font-size:11px;">
+                                    <option value="seticon/Set_Icon_Scarlet_Violet.png" selected>Scarlet & Violet</option>
+                                    <option value="seticon/Set_Icon_Scarlet_Violet_Inverted.png">S&V (Blanco/Invertido)</option>
+                                    <option value="seticon/Set_Icon_Custom.png">Custom / Otro</option>
+                                </select>
+                            </div>
+                             <div style="flex:1;">
+                                <label>Texto Set (Ej: SVI)</label>
+                                <input type="text" id="set_text_val" placeholder="SVI" oninput="updateCardData()">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div style="flex:1;">
+                                <label>Marca de Regulación</label>
+                                <select id="reg_mark_img" onchange="updateCardData()" style="width:100%; background:#333; color:white; padding:5px; font-size:11px;">
+                                    <option value="regulationmark/Regulation_Mark_Scarlet_Violet.png" selected>Scarlet & Violet (G/H)</option>
+                                    <option value="regulationmark/Regulation_Mark_Sword_Shiel.png">Sword & Shield (E/F)</option>
+                                </select>
+                            </div>
+                            <div style="flex:1;">
+                                <label>N° Carta</label>
+                                <input type="text" id="set_num_curr" placeholder="001" oninput="updateCardData()">
+                            </div>
+                            <div style="flex:1;">
+                                <label>Total</label>
+                                <input type="text" id="set_num_total" placeholder="200" oninput="updateCardData()">
+                            </div>
+                        </div>
+
+                         <div class="row">
+                             <div style="flex:1;">
+                                <label>Rareza</label>
+                                <select id="rarity_icon" onchange="updateCardData()" style="width:100%; background:#333; color:white; border:1px solid #555;">
+                                    <option value="●">● Común</option>
+                                    <option value="◆">◆ Infrecuente</option>
+                                    <option value="★">★ Rara</option>
+                                    <option value="☆">☆ Holo</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </details>
+            </div>
+
+
+            <div class="section" style="border-top: 1px solid #444; padding-top: 15px;">
+                <div class="input-group">
+                    <label>Resolución de Salida</label>
+                    <select id="exportResolution" onchange="renderCard()" style="width:100%; padding:5px; background:#333; color:white; border:1px solid #555;">
+                        <option value="1">Base (745 x 1040 px)</option>
+                        <option value="2">Alta (1490 x 2080 px)</option>
+                        <option value="4" selected>Ultra (2980 x 4160 px)</option>
+                    </select>
+                </div>
+                <div class="row" style="gap:5px;">
+                    <button type="button" class="btn-generate" onclick="downloadCard()" style="flex:2; background:#28a745;">Descargar PNG</button>
+                    <button type="button" onclick="exportJSON(event)" style="flex:1; background:#17a2b8; border:none; color:white; border-radius:4px; cursor:pointer;">JSON ⬇</button>
+                     <label style="flex:1; background:#ffc107; color:#000; border-radius:4px; cursor:pointer; text-align:center; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:bold;">
+                        JSON ⬆
+                        <input type="file" accept=".json" onchange="importJSON(this)" style="display:none;">
+                    </label>
+                </div>
+            </div>
+        </aside>
+
+        <main class="preview-panel">
+            <canvas id="cardCanvas" width="2980" height="4160"
+                    style="width: auto; height: auto; max-width: 100%; max-height: 90vh; display: block; margin: 0 auto; box-shadow: 0 0 20px rgba(0,0,0,0.5);">
+            </canvas>
+        </main>
+
+        <div id="dashboard-overlay" class="dashboard-overlay">
+            <div class="dashboard-container">
+                <div class="dashboard-header">
+                    <h2>🗂️ Gestor de Cartas Pokémon</h2>
+
+                    <div class="filter-bar">
+                        <label class="file-button">Importar JSON del escritorio<input id="library-import" type="file" accept=".json" multiple onchange="importLibrary(this)"></label>
+                        <input type="text" id="dashboard_search" class="search-input" placeholder="🔍 Filtrar por nombre, rareza, número..." oninput="filterCards()">
+
+                    </div>
+                </div>
+
+                <div class="dashboard-content">
+                    <div id="cards_grid" class="cards-grid">
+                        </div>
+                </div>
+
+                <div class="dashboard-footer">
+                    <button class="btn-dash-action" onclick="resetAndClose()" style="background:#da3633; color:white;">🗑️ Carta en blanco</button>
+                    <button class="btn-dash-action" onclick="toggleDashboard(false)" style="background:#238636; color:white;">Ir al editor ➔</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <section id="batch-panel" class="batch-panel" aria-label="Exportación de colecciones" hidden>
+        <p id="batch-status" role="status">Preparando…</p><progress id="batch-progress" value="0" max="1"></progress>
+        <button id="batch-cancel" onclick="cancelBatch()">Cancelar después de esta carta</button>
+        <button onclick="document.getElementById('batch-panel').hidden=true" type="button">Ocultar</button>
+        <div id="batch-downloads"></div>
+    </section>
+    <script src="config.js"></script>
+    <script src="assets.js"></script>
+    <script src="vendor/fflate.js"></script>
+    <script src="core.js"></script>
+    <script src="images.js"></script>
+    <script src="storage.js"></script>
+    <script src="drive.js"></script>
+    <script src="renderer.js"></script>
+    <script src="main.js"></script>
+    <script src="library.js"></script>
+    <script src="auth.js"></script>
+    <script src="editor.js"></script>
+    <script src="batch.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+node_modules/
+dist/
+site/
+_savedata/
+cache/
+test-results/
+playwright-report/
+.env*
+audit-original.json
+scripts/*.original.*.txt
+# Original high resolution assets remain on this PC; web-assets is the publishable set.
+/bordes/
+/energias/
+/customicons/
+/images/
+/mascaras/
+/pokemons/
+/pokemons_other/
+/regulationmark/
+/seticon/
+/tags/
+fuentes/*_old
+scripts/migrate_editor.py
+scripts/finish_editor.py
+scripts/prepare_html.py
+scripts/fix_asset_paths.py

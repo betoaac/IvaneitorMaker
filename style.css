@@ -1,0 +1,662 @@
+/* =========================================================
+   1. REGISTRO DE FUENTES
+   ========================================================= */
+
+/* NOMBRE POKÉMON */
+@font-face { font-family: 'PokeName'; src: url('fuentes/Texto_PokemonNombre.otf'); }
+
+/* DATOS POKÉDEX */
+@font-face { font-family: 'PokeStats'; src: url('fuentes/Textos_PokedexData.ttf'); }
+
+/* TÍTULOS (Habilidad/Ataques) */
+@font-face { font-family: 'AttackTitle'; src: url('fuentes/Textos_HabilidadAtaqueTitulo.ttf'); }
+
+/* --- RICH TEXT --- */
+@font-face { font-family: 'BodyText'; src: url('fuentes/Textos_EfectosdeAtaques.otf'); }
+@font-face { font-family: 'BodyTextBold'; src: url('fuentes/Textos_EfectosdeAtaques_Negrita.otf'); }
+@font-face { font-family: 'BodyTextItalic'; src: url('fuentes/Textos_EfectosdeAtaques_Cursiva.otf'); }
+@font-face { font-family: 'BodyTextBoldItalic'; src: url('fuentes/Textos_EfectosdeAtaques_NegritaCursiva.otf'); }
+@font-face { font-family: 'BodyTextCondensed'; src: url('fuentes/Textos_EfectosdeAtaques_Condensada.ttf'); }
+
+/* FUENTES EXTRA */
+@font-face { font-family: 'EvoFont'; src: url('fuentes/Textos_EvolucionaDe.ttf'); }
+@font-face { font-family: 'FlavorText'; src: url('fuentes/Textos_Flavour.ttf'); }
+@font-face { font-family: 'PokeSymbols'; src: url('fuentes/Textos_SIMBOLOS.otf'); }
+@font-face { font-family: 'FuturaStdHeavy'; src: url('fuentes/FuturaStdHeavy.otf'); font-weight: bold; }
+@font-face { font-family: 'HandelGothic'; src: url('fuentes/Texto_Etapa.TTF'); }
+
+/* FUENTE DE ETAPA (Basico/Fase) */
+@font-face {
+    font-family: 'StageFont';
+    src: url('fuentes/Texto_Etapa.TTF');
+}
+
+@font-face {
+    font-family: 'SegoeSymbols';
+    src: url('fuentes/Textos_SegoeSymbols.ttf');
+}
+
+/* =========================================================
+   2. LAYOUT PRINCIPAL
+   ========================================================= */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #111;
+    color: #eee;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* Contenedor Flex */
+.app-container {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+}
+
+/* PANEL IZQUIERDO: CONTROLES (REDIMENSIONABLE) */
+.controls {
+    /* Dimensiones base */
+    width: 420px;
+    min-width: 350px;
+    max-width: 80vw;
+
+    /* Estilos de caja */
+    background-color: #1a1a1a;
+    border-right: 1px solid #333;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+
+    /* PROPIEDADES PARA EL RESIZE */
+    resize: horizontal; /* Permite arrastrar horizontalmente */
+    overflow: auto;     /* Obligatorio para que resize funcione */
+    height: 100%;
+
+    /* Indicador visual de arrastre en la esquina inferior derecha */
+    background-image: linear-gradient(135deg, transparent 96%, #4db8ff 96%);
+    background-repeat: no-repeat;
+    background-position: bottom right;
+}
+
+/* Scrollbar personalizado del panel */
+.controls::-webkit-scrollbar { width: 8px; height: 8px; } /* Height para scroll horizontal si aparece */
+.controls::-webkit-scrollbar-track { background: #111; }
+.controls::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+.controls::-webkit-scrollbar-thumb:hover { background: #666; }
+
+/* PANEL DERECHO: VISTA PREVIA */
+.preview-panel {
+    flex: 1;
+    background-color: #000;
+    background-image:
+        radial-gradient(#222 1px, transparent 1px),
+        radial-gradient(#222 1px, transparent 1px);
+    background-size: 20px 20px;
+    background-position: 0 0, 10px 10px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    overflow: auto;
+}
+
+canvas {
+    max-height: 90vh;
+    box-shadow: 0 0 50px rgba(0,0,0,0.8);
+    border-radius: 15px;
+}
+
+
+/* =========================================================
+   3. ESTILOS DE COMPONENTES UI
+   ========================================================= */
+
+.section {
+    background: #222;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #333;
+    margin-bottom: 5px;
+}
+
+h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #4db8ff;
+    border-bottom: 1px solid #333;
+    padding-bottom: 5px;
+}
+
+.row { display: flex; gap: 10px; margin-bottom: 10px; }
+.input-group { margin-bottom: 12px; }
+
+label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 11px;
+    color: #aaa;
+    font-weight: 600;
+}
+
+input[type="text"],
+input[type="number"],
+textarea,
+select {
+    width: 100%;
+    background: #111;
+    border: 1px solid #444;
+    color: #fff;
+    border-radius: 4px;
+    padding: 8px;
+    font-size: 13px;
+    transition: border 0.2s;
+}
+
+input[type="text"]:focus, input[type="number"]:focus, textarea:focus {
+    border-color: #4db8ff;
+    outline: none;
+    background: #151515;
+}
+
+textarea.auto-expand {
+    overflow-y: hidden;
+    resize: none;
+    min-height: 40px;
+}
+
+button {
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+}
+
+.btn-generate {
+    width: 100%;
+    padding: 12px;
+    font-weight: bold;
+    color: white;
+    background: #28a745;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    text-transform: uppercase;
+}
+.btn-generate:hover { background: #218838; }
+
+
+/* =========================================================
+   4. CONTROLES AVANZADOS
+   ========================================================= */
+
+/* Acordeones */
+details.advanced-options {
+    background: #1a1a1a;
+    border-radius: 5px;
+    border: 1px solid #333;
+    margin-top: 10px;
+}
+
+details.advanced-options summary {
+    padding: 10px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+    color: #ccc;
+    background: #252525;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    list-style: none;
+}
+details.advanced-options summary:hover { background: #333; color: #fff; }
+.details-content { padding: 15px; border-top: 1px solid #333; background: #151515; }
+
+/* Sliders */
+.slider-control { margin-bottom: 12px; }
+.slider-control label { display: flex; justify-content: space-between; }
+
+input[type=range] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    background: #444;
+    border-radius: 2px;
+    outline: none;
+    margin-top: 5px;
+}
+input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #4db8ff;
+    cursor: pointer;
+    border: 2px solid #1a1a1a;
+    transition: transform 0.1s;
+}
+input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+/* Grupos de Botones */
+.btn-group-stage {
+    display: flex;
+    border: 1px solid #444;
+    border-radius: 4px;
+    overflow: hidden;
+}
+.btn-group-stage button {
+    flex: 1;
+    background: #222;
+    border: none;
+    color: #888;
+    padding: 8px 5px;
+    font-size: 11px;
+    border-right: 1px solid #444;
+}
+.btn-group-stage button:last-child { border-right: none; }
+.btn-group-stage button.active { background: #007bff; color: white; font-weight: bold; }
+.btn-group-stage button:hover:not(.active) { background: #333; color: white; }
+
+.mini-buttons { display: flex; gap: 2px; }
+.mini-buttons button {
+    flex: 1;
+    background: #222;
+    border: 1px solid #444;
+    color: #aaa;
+    padding: 5px 0;
+    border-radius: 3px;
+    font-size: 10px;
+}
+.mini-buttons button:hover { background: #444; color: white; }
+
+/* Checkboxes */
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    cursor: pointer;
+    user-select: none;
+    background: #222;
+    padding: 5px 10px;
+    border-radius: 4px;
+    border: 1px solid #333;
+}
+.checkbox-container:hover { border-color: #555; }
+
+
+/* =========================================================
+   5. ELEMENTOS VISUALES ESPECÍFICOS
+   ========================================================= */
+
+/* 5.1. BOTONES DE ENERGÍA (Números debajo) */
+.energy-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.energy-btn {
+    display: flex;
+    flex-direction: column; /* Apilar verticalmente */
+    align-items: center;
+    justify-content: center;
+    width: 34px;    /* Ancho fijo */
+    height: 44px;   /* Alto mayor para caber texto */
+    padding: 2px;
+    border: 1px solid #444;
+    border-radius: 4px;
+    background: #2a2a2a;
+    cursor: pointer;
+}
+.energy-btn:hover { background: #333; border-color: #666; }
+
+/* Forzar tamaño de imagen dentro del botón */
+.energy-btn img {
+    width: 22px !important;
+    height: 22px !important;
+    object-fit: contain;
+    margin-bottom: 2px;
+}
+
+/* Texto del contador */
+.energy-btn span {
+    font-size: 11px;
+    font-weight: bold;
+    color: #fff;
+    line-height: 1;
+}
+
+/* 5.2. VISUALIZADOR DE TIPO (T1/T2) */
+.type-display-box {
+    width: 100%;
+    height: 32px;
+    background: #111;
+    border: 1px solid #444;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.type-display-box img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+}
+
+/* 5.3. SELECTORES TCG, WEAK, RES (Iconos) */
+.type-selector-group, .mini-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    background: #111;
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #333;
+}
+
+.mini-selector {
+    flex-direction: row; /* Horizontal */
+    margin-bottom: 5px;
+}
+
+.type-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    background: #222;
+    cursor: pointer;
+    padding: 3px;
+    opacity: 0.5;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.mini-selector .type-btn {
+    width: 24px;
+    height: 24px; /* Más pequeños para debilidad/resistencia */
+}
+
+.type-btn img { width: 100%; height: 100%; object-fit: contain; }
+.type-btn:hover { opacity: 1; transform: scale(1.1); }
+.type-btn.active {
+    opacity: 1;
+    border-color: #4db8ff;
+    box-shadow: 0 0 5px rgba(77, 184, 255, 0.5);
+    background: #000;
+}
+
+/* =========================================
+   ESTILOS NUEVOS PARA SLIDERS AVANZADOS
+   ========================================= */
+.slider-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.slider-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* El input numérico pequeño */
+.slider-num-input {
+    width: 50px;
+    background: #222;
+    border: 1px solid #444;
+    color: #4db8ff; /* Azulito para destacar */
+    text-align: right;
+    padding: 2px 5px;
+    font-size: 11px;
+    border-radius: 3px;
+    font-weight: bold;
+}
+.slider-num-input:focus {
+    border-color: #4db8ff;
+    background: #000;
+}
+
+/* El botón de Reset "R" */
+.btn-reset-slider {
+    background: #333;
+    color: #aaa;
+    border: 1px solid #444;
+    border-radius: 3px;
+    width: 20px;
+    height: 20px;
+    font-size: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+.btn-reset-slider:hover {
+    background: #cc0000; /* Rojo al pasar el mouse */
+    color: white;
+    border-color: #ff0000;
+}
+
+
+/* =========================================================
+   ESTILOS DEL DASHBOARD (PANTALLA COMPLETA FORZADA)
+   ========================================================= */
+
+/* El contenedor padre que cubre toda la ventana */
+.dashboard-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw !important;  /* Ancho total de la ventana */
+    height: 100vh !important; /* Alto total de la ventana */
+    background: #0d1117;      /* Fondo oscuro sólido (GitHub Dark) */
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* El contenedor interno (quitamos bordes y límites) */
+.dashboard-container {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;  /* Elimina el límite de 1100px */
+    max-height: none !important; /* Elimina el límite de 85vh */
+    background: #0d1117;
+    border: none !important;     /* Quita el borde azul */
+    border-radius: 0 !important; /* Quita esquinas redondeadas */
+    box-shadow: none !important; /* Quita la sombra */
+    display: flex;
+    flex-direction: column;
+    margin: 0 !important;
+}
+
+/* Cabecera (Ajustada para pantalla completa) */
+.dashboard-header {
+    padding: 20px 40px;
+    background: #161b22;
+    border-bottom: 1px solid #30363d;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: white;
+    flex-shrink: 0; /* Evita que se aplaste */
+}
+
+.dashboard-header h2 { margin: 0; font-size: 24px; color: #4db8ff; }
+
+/* Barra de Filtros */
+.filter-bar { display: flex; gap: 15px; align-items: center; }
+
+.search-input {
+    padding: 10px 15px; border-radius: 6px; border: 1px solid #30363d;
+    background: #0d1117; color: white; width: 300px; font-size: 14px;
+}
+.search-input:focus { border-color: #4db8ff; outline: none; }
+
+/* Contenido (Grid de cartas) */
+.dashboard-content {
+    flex: 1; /* Ocupa todo el espacio disponible */
+    overflow-y: auto; /* Scroll solo en esta zona */
+    padding: 40px;
+    background: #0d1117;
+}
+
+/* REEMPLAZA TU .cards-grid ACTUAL POR ESTE: */
+
+.cards-grid {
+    /* Cambiamos Grid por Flex Column para que las secciones (títulos, filas) bajen */
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    padding-bottom: 50px; /* Espacio extra abajo para que no se corte */
+}
+
+/* Pie de página */
+.dashboard-footer {
+    padding: 20px 40px;
+    border-top: 1px solid #30363d;
+    background: #161b22;
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    flex-shrink: 0;
+}
+
+/* ESTILOS DE LA TARJETA (Ya ajustados) */
+.saved-card-item {
+    background: #161b22; border: 1px solid #30363d; border-radius: 10px;
+    overflow: hidden; transition: all 0.2s; cursor: pointer; position: relative;
+    display: flex; flex-direction: column;
+}
+.saved-card-item:hover { transform: translateY(-5px); border-color: #4db8ff; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+
+.card-thumb {
+    width: 100%; height: 320px; /* Altura fija para uniformidad */
+    object-fit: contain; background: #0a0a0a; border-bottom: 1px solid #30363d;
+}
+
+.card-info { padding: 15px; color: #c9d1d9; font-size: 12px; line-height: 1.5; }
+.info-line-1 { font-weight: bold; color: #8b949e; font-size: 11px; text-transform: uppercase; display: flex; justify-content: space-between; margin-bottom: 4px;}
+.info-line-2 { font-weight: bold; color: #fff; font-size: 15px; margin-bottom: 4px; }
+.info-line-3 { color: #ff7b72; font-style: italic; margin-bottom: 8px; }
+.info-line-date { color: #484f58; font-size: 10px; text-align: right; margin-top: auto; }
+
+.btn-delete-card {
+    position: absolute; top: 10px; right: 10px;
+    background: rgba(220, 38, 38, 0.9); color: white; border: none;
+    width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+    display: none; font-weight: bold; align-items: center; justify-content: center; font-size: 18px;
+    z-index: 10;
+}
+.saved-card-item:hover .btn-delete-card { display: flex; }
+
+.btn-dash-action {
+    padding: 10px 25px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; border: none; transition: 0.2s;
+}
+.btn-dash-action:hover { opacity: 0.9; transform: scale(1.02); }
+
+/* --- ESTILOS DE LA GALERÍA POR SETS --- */
+
+/* Títulos de sección */
+.gallery-section-title {
+    width: 100%;
+    color: #4db8ff;
+    font-family: sans-serif;
+    font-size: 18px;
+    margin: 20px 0 10px 0;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #444;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Contenedor de carpetas */
+.sets-grid-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    width: 100%;
+}
+
+/* Diseño de la Carpeta (Folder) */
+.set-folder-item {
+    width: 160px;
+    height: 120px;
+    background: #333;
+    border: 1px solid #555;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.set-folder-item:hover {
+    background: #444;
+    border-color: #4db8ff;
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+/* Icono dentro de la carpeta (si hay icono del set) */
+.set-folder-icon {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    margin-bottom: 10px;
+    opacity: 0.8;
+}
+
+.set-folder-name {
+    color: #fff;
+    font-weight: bold;
+    font-size: 14px;
+    text-align: center;
+    padding: 0 10px;
+}
+
+.set-folder-count {
+    color: #888;
+    font-size: 11px;
+    margin-top: 5px;
+}
+
+/* Botón Volver */
+.btn-back-gallery {
+    padding: 8px 15px;
+    background: #555;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: bold;
+}
+.btn-back-gallery:hover { background: #777; }
