@@ -22,6 +22,12 @@ fs.copyFileSync(path.join(root, 'node_modules/fflate/umd/index.js'), path.join(t
 fs.copyFileSync(path.join(root, 'node_modules/fflate/LICENSE'), path.join(target, 'vendor/fflate.LICENSE'));
 fs.writeFileSync(path.join(target, '.nojekyll'), '');
 if (process.env.GOOGLE_CLIENT_ID) fs.writeFileSync(path.join(target, 'config.js'), `globalThis.CARDMAKER_CONFIG = ${JSON.stringify({ googleClientId: process.env.GOOGLE_CLIENT_ID })};\n`);
+// Give configuration a content-based URL so a previous deployment cannot cache an empty client ID.
+const configHash = require('node:crypto').createHash('sha256').update(fs.readFileSync(path.join(target, 'config.js'))).digest('hex').slice(0, 12);
+const configName = `app-config-${configHash}.js`;
+fs.renameSync(path.join(target, 'config.js'), path.join(target, configName));
+const indexPath = path.join(target, 'index.html');
+fs.writeFileSync(indexPath, fs.readFileSync(indexPath, 'utf8').replace('src="config.js"', `src="${configName}"`));
 let size = 0;
 function measure(directory) { for (const file of fs.readdirSync(directory, { withFileTypes: true })) { const full = path.join(directory, file.name); if (file.isDirectory()) measure(full); else { const bytes = fs.statSync(full).size; if (bytes > 25 * 1024 * 1024) throw new Error('Archivo web demasiado grande: ' + full); size += bytes; } } }
 measure(target);
