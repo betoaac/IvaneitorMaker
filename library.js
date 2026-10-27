@@ -1,6 +1,34 @@
 let libraryRecords = [];
 let galleryTicket = 0;
 let libraryBusy = false;
+const galleryThumbCache = new Map();
+const galleryThumbQueue = [];
+let galleryThumbWorkers = 0;
+let galleryThumbObserver;
+function paintGalleryThumbnail(img, placeholder, source) {
+    if (!img.isConnected) return;
+    img.src = source; img.hidden = false; placeholder.hidden = true;
+}
+function pumpGalleryThumbnails() {
+    while (galleryThumbWorkers < 2 && galleryThumbQueue.length) {
+        const { record, img, placeholder } = galleryThumbQueue.shift();
+        if (!img.isConnected) continue;
+        galleryThumbWorkers++;
+        (async () => {
+            const canvas = document.createElement('canvas');
+            try {
+                await renderCardSnapshot(CardCore.normalizeCard(record.data, defaultConfig), canvas, { multiplier: 0.5 });
+                const source = canvas.toDataURL('image/webp', 0.82);
+                const key = `${record.id}:${record.revision || record.timestamp}`;
+                galleryThumbCache.set(key, source);
+                while (galleryThumbCache.size > 200) galleryThumbCache.delete(galleryThumbCache.keys().next().value);
+                paintGalleryThumbnail(img, placeholder, source);
+            } catch {
+                if (placeholder.isConnected) placeholder.textContent = 'Vista previa no disponible. Puedes abrir la carta.';
+            } finally { canvas.width = canvas.height = 0; galleryThumbWorkers--; pumpGalleryThumbnails(); }
+        })();
+    }
+}
 function repository() { return CloudAuth.usingDrive() ? CloudAuth.store() : LocalCards; }
 function element(tag, text, className) {
     const el = document.createElement(tag);
@@ -96,6 +124,14 @@ async function renderGallery() {
     } catch (error) { if (ticket === galleryTicket) { grid.replaceChildren(element('p', error.message)); status(error.message, true); } }
 }
 function drawGallery() {
+    galleryThumbObserver?.disconnect(); galleryThumbQueue.length = 0;
+    const thumbnailTargets = new WeakMap();
+    galleryThumbObserver = new IntersectionObserver(entries => {
+        for (const entry of entries) if (entry.isIntersecting) {
+            galleryThumbObserver.unobserve(entry.target);
+            galleryThumbQueue.push(thumbnailTargets.get(entry.target)); pumpGalleryThumbnails();
+        }
+    }, { root: document.querySelector('.dashboard-content'), rootMargin: '200px' });
     const grid = document.getElementById('cards_grid'); grid.replaceChildren();
     const setName = record => record.data.config?.setTextVal || 'SIN SET';
     const setNames = [...new Set(libraryRecords.map(setName))].sort();
@@ -105,24 +141,33 @@ function drawGallery() {
     for (const name of setNames) { const option = element('option', name); option.value = name; select.append(option); }
     select.value = currentSetFilter || ''; select.onchange = () => { currentSetFilter = select.value || null; drawGallery(); };
     const selected = libraryRecords.filter(record => !currentSetFilter || setName(record) === currentSetFilter).sort((a, b) => Number(a.data.config?.setNumCurr || 0) - Number(b.data.config?.setNumCurr || 0));
-    header.append(select, button('Exportar CSV', () => exportSetToCSV(currentSetFilter || 'Todas', selected)), button('Descargar PNG en ZIP', () => downloadSetUltra(currentSetFilter || 'Todas', selected)), button('Respaldar JSON en ZIP', () => backupLibrary(selected)), button('Recargar', renderGallery));
+    const count = element('span', '', 'gallery-count'); count.setAttribute('aria-live', 'polite');
+    header.append(select, count, button('Exportar CSV', () => exportSetToCSV(currentSetFilter || 'Todas', selected)), button('Descargar PNG en ZIP', () => downloadSetUltra(currentSetFilter || 'Todas', selected)), button('Respaldar JSON en ZIP', () => backupLibrary(selected)), button('Recargar', renderGallery));
     grid.append(header);
     if (!selected.length) grid.append(element('p', 'Aún no hay cartas. Guarda una desde el editor o importa tus JSON del escritorio.'));
     for (const record of selected) {
         const data = record.data;
         const item = element('article', undefined, 'saved-card-item');
         item.dataset.search = `${data.mainName} ${setName(record)} ${data.config?.setNumCurr || ''} ${data.config?.rarityIcon || ''}`.toLowerCase();
-        if (record.thumbnail) {
-            const img = element('img'); img.src = CardCore.safeImage(record.thumbnail); img.alt = data.mainName || 'Carta'; img.className = 'card-thumb'; img.loading = 'lazy'; item.append(img);
-        }
+        const openCard = async () => { try { await applyCard(data, record); toggleDashboard(false); } catch (error) { status(error.message, true); } };
+        const preview = button('', openCard, 'card-preview'); preview.setAttribute('aria-label', `Abrir carta ${data.mainName || 'sin nombre'}`);
+        const img = element('img', undefined, 'card-thumb'); img.alt = data.mainName || 'Carta'; img.loading = 'lazy'; img.decoding = 'async'; img.hidden = true;
+        const placeholder = element('span', 'Preparando miniatura…', 'card-preview-placeholder');
+        preview.append(img, placeholder); item.append(preview);
+        const cachedThumbnail = galleryThumbCache.get(`${record.id}:${record.revision || record.timestamp}`);
+        const source = cachedThumbnail || record.thumbnail;
+        if (source) { img.src = CardCore.safeImage(source); img.hidden = false; placeholder.hidden = true; }
+        else { thumbnailTargets.set(preview, { record, img, placeholder }); galleryThumbObserver.observe(preview); }
         const info = element('div', undefined, 'card-info');
         info.append(element('div', `${setName(record)} · ${data.config?.setNumCurr || '?'}`, 'info-line-1'), element('div', data.mainName || 'Sin nombre', 'info-line-2'));
-        info.append(button('Abrir', async () => { try { await applyCard(data, record); toggleDashboard(false); } catch (error) { status(error.message, true); } }));
-        info.append(button('Borrar', async () => {
+        const actions = element('div', undefined, 'gallery-card-actions');
+        actions.append(button('Abrir', openCard, 'gallery-open'));
+        actions.append(button('Borrar', async () => {
             if (!confirm(`¿Borrar definitivamente ${data.mainName || 'esta carta'}?`)) return;
             try { await repository().remove(record.id, record.revision); if (loadedRecord?.id === record.id) { loadedRecord = null; currentLoadedFilePath = null; } await renderGallery(); }
             catch (error) { status(error.message, true); }
-        }));
+        }, 'gallery-delete'));
+        info.append(actions);
         item.append(info); grid.append(item);
     }
     filterCards();
@@ -130,6 +175,10 @@ function drawGallery() {
 function filterCards() {
     const term = document.getElementById('dashboard_search').value.toLowerCase();
     document.querySelectorAll('.saved-card-item').forEach(item => item.hidden = !item.dataset.search.includes(term));
+    const cards = [...document.querySelectorAll('.saved-card-item')];
+    const visible = cards.filter(item => !item.hidden).length;
+    const count = document.querySelector('.gallery-count');
+    if (count) count.textContent = term ? `${visible} de ${cards.length} cartas` : `${visible} cartas`;
 }
 async function importLibrary(input) {
     if (libraryBusy) return;
@@ -142,6 +191,7 @@ async function importLibrary(input) {
                 if (file.size > 24 * 1024 * 1024) throw new Error('JSON mayor de 24 MB');
                 const data = CardCore.normalizeCard(JSON.parse(await file.text()), defaultConfig);
                 await store.save({ id: crypto.randomUUID(), timestamp: Date.now(), data }, undefined); count++;
+                status(`Importadas ${count} de ${input.files.length} cartas. Continúa la importación…`);
             } catch (error) { failures.push(`${file.name}: ${error.message}`); }
         }
         await renderGallery(); status(`Importadas ${count} cartas. ${failures.length} errores.`, !!failures.length);

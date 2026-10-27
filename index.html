@@ -637,8 +637,9 @@
                     <h2>🗂️ Gestor de Cartas Pokémon</h2>
 
                     <div class="filter-bar">
-                        <label class="file-button">Importar JSON del escritorio<input id="library-import" type="file" accept=".json" multiple onchange="importLibrary(this)"></label>
-                        <input type="text" id="dashboard_search" class="search-input" placeholder="🔍 Filtrar por nombre, rareza, número..." oninput="filterCards()">
+                        <button type="button" class="file-button" onclick="document.getElementById('library-import').click()">Importar JSON</button>
+                        <input id="library-import" type="file" accept=".json" multiple hidden aria-label="Importar JSON del escritorio" onchange="importLibrary(this)">
+                        <input type="text" id="dashboard_search" class="search-input" aria-label="Buscar cartas" placeholder="🔍 Filtrar por nombre, rareza, número..." oninput="filterCards()">
 
                     </div>
                 </div>

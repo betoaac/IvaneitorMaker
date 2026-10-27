@@ -15,12 +15,28 @@ button:focus-visible, [role=button]:focus-visible, summary:focus-visible, input:
 .background-tools { border: 1px solid #59636e; border-radius: 5px; padding: 8px; font-size: 12px; }
 .custom-background-button { width: 100%; margin: 8px 0; padding: 10px; border-color: #82caff; }
 .background-tools p { line-height: 1.5; color: #c9d1d9; }
-.file-button { display: inline-block; border: 1px solid #59636e; border-radius: 5px; padding: 7px; color: white; }
+.file-button { display: inline-block; white-space: nowrap; border: 1px solid #59636e; border-radius: 5px; padding: 7px; color: white; }
 .file-button input { display: block; margin-top: 5px; max-width: 260px; }
-.gallery-toolbar { display: flex; flex-wrap: wrap; gap: 8px; width: 100%; }
+.dashboard-header { gap: 16px; flex-wrap: wrap; }
+.dashboard-header h2 { font-size: 20px; }
+.dashboard-content { min-height: 0; background: #161b22; }
+.cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); align-content: start; gap: 20px; padding-bottom: 16px; }
+.gallery-toolbar { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; width: 100%; margin-bottom: 4px; }
 .gallery-toolbar select { width: auto; min-width: 140px; }
-.saved-card-item { max-width: 240px; }
-.saved-card-item .card-info button { margin: 6px 6px 0 0; }
+.gallery-count { margin-right: auto; color: #b4c1cd; font-size: 13px; white-space: nowrap; }
+.saved-card-item { width: auto; max-width: none; padding: 10px; border: 1px solid #39434d; border-radius: 12px; background: #1d242d; overflow: hidden; }
+.saved-card-item:hover { transform: none; box-shadow: none; }
+.card-preview { display: grid; place-items: center; width: 100%; aspect-ratio: 745 / 1040; padding: 0; border: 0; border-radius: 8px; background: #12171e; overflow: hidden; }
+.saved-card-item .card-thumb { display: block; width: 100%; height: 100%; object-fit: contain; background: transparent; }
+.card-preview-placeholder { padding: 16px; color: #b4c1cd; font-size: 12px; line-height: 1.5; }
+.saved-card-item .card-info { padding: 12px 2px 2px; }
+.saved-card-item .info-line-1 { color: #a6bcd0; font-size: 11px; line-height: 1.5; }
+.saved-card-item .info-line-2 { margin: 3px 0 12px; color: #f0f4f8; font-size: 16px; font-weight: 650; overflow-wrap: anywhere; }
+.gallery-card-actions { display: flex; gap: 8px; }
+.saved-card-item .card-info button { margin: 0; padding: 8px 10px; font-size: 12px; min-height: 36px; }
+.gallery-open { flex: 1; color: #fff; background: #1673b9; border: 1px solid #338dce; }
+.gallery-delete { background: transparent; color: #c6d2dd; border: 1px solid #4e5c6a; }
+.gallery-delete:hover { color: #ffb4ab; border-color: #ffb4ab; }
 .energy-btn { position: relative; margin-bottom: 16px; }
 .energy-remove { position: absolute; bottom: -19px; right: 0; font-size: 11px; padding: 0 4px; line-height: 16px; }
 .batch-panel { position: fixed; z-index: 10010; bottom: 12px; right: 12px; width: min(520px, calc(100vw - 24px)); max-height: 55vh; overflow: auto; background: #161b22; color: white; border: 1px solid #82caff; padding: 16px; border-radius: 8px; box-shadow: 0 5px 30px #0009; }
@@ -36,6 +52,8 @@ button:focus-visible, [role=button]:focus-visible, summary:focus-visible, input:
     #cardCanvas { max-width: 100%; max-height: 50vh !important; }
     .dashboard-container { width: 100%; height: 100%; max-height: 100%; border-radius: 0; }
     .dashboard-header { flex-direction: column; gap: 8px; }
+    .dashboard-content { padding: 12px; }
+    .cards-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
     .filter-bar { flex-wrap: wrap; }
     .dashboard-footer { flex-wrap: wrap; }
     .row { flex-wrap: wrap; }
